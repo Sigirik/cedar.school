@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Файл базы данных
+*.sqlite3
+# Файл с миграциями и их кэшами
+*/migrations/__pycache__/
+# Локальные настройки
+config/local_settings.py
