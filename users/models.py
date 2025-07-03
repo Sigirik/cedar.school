@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.conf import settings
+from schedule.models import Grade, Subject
 
 class User(AbstractUser):
     class Role(models.TextChoices):
@@ -15,3 +17,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+class UserSubject(models.Model):
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'TEACHER'})
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.teacher} — {self.subject}"
+
+class UserGrade(models.Model):
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'TEACHER'})
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.teacher} — {self.grade}"

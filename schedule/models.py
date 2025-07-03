@@ -1,6 +1,7 @@
 from django.db import models
-from users.models import User
 from django.conf import settings
+from datetime import timedelta, datetime
+from django.core.exceptions import ValidationError
 
 # Дни недели: используется для выбора дня в расписании
 DAY_CHOICES = (
@@ -47,7 +48,11 @@ class WeeklyNorm(models.Model):
 
 # Доступность учителя по дням недели и времени — для составления расписания
 class TeacherAvailability(models.Model):
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={"role": User.Role.TEACHER})
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={"role": "TEACHER"}  # если понадобится
+    )
     day_of_week = models.PositiveSmallIntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -68,17 +73,17 @@ class TemplateWeek(models.Model):
 
 # Урок в шаблоне недели — используется для построения расписания
 class TemplateLesson(models.Model):
-    template_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE)
-    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    template_week = models.ForeignKey("TemplateWeek", on_delete=models.CASCADE)
+    grade = models.ForeignKey("Grade", on_delete=models.CASCADE)
+    subject = models.ForeignKey("Subject", on_delete=models.CASCADE)
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'role': User.Role.TEACHER}
+        limit_choices_to={"role": "teacher"}
     )
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
-    end_time = models.TimeField()
+    duration_minutes = models.PositiveSmallIntegerField(default=45)
 
     class Meta:
         ordering = ["day_of_week", "start_time"]
@@ -86,11 +91,17 @@ class TemplateLesson(models.Model):
     def __str__(self):
         return f"{self.template_week} | {self.grade} | {WEEKDAYS[self.day_of_week]} {self.start_time} — {self.subject}"
 
+    @property
+    def end_time(self):
+        dt_start = datetime.combine(datetime.today(), self.start_time)
+        dt_end = dt_start + timedelta(minutes=self.duration_minutes)
+        return dt_end.time()
+
 # Реальный урок (в расписании) с датой, темой, ссылкой на шаблон и фактической темой
 class RealLesson(models.Model):
     date = models.DateField()
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={"role": User.Role.TEACHER})
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'TEACHER'})
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     start_time = models.TimeField()
     end_time = models.TimeField()
