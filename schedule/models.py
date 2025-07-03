@@ -73,44 +73,88 @@ class TemplateWeek(models.Model):
 
 # Урок в шаблоне недели — используется для построения расписания
 class TemplateLesson(models.Model):
-    template_week = models.ForeignKey("TemplateWeek", on_delete=models.CASCADE)
-    grade = models.ForeignKey("Grade", on_delete=models.CASCADE)
-    subject = models.ForeignKey("Subject", on_delete=models.CASCADE)
+    template_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE)
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={"role": "teacher"}
+        limit_choices_to={"role": "TEACHER"}
     )
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
-    duration_minutes = models.PositiveSmallIntegerField(default=45)
+    duration_minutes = models.PositiveIntegerField(default=45)
 
     class Meta:
         ordering = ["day_of_week", "start_time"]
 
     def __str__(self):
-        return f"{self.template_week} | {self.grade} | {WEEKDAYS[self.day_of_week]} {self.start_time} — {self.subject}"
+        return f"{self.template_week} | {self.grade} | {DAY_CHOICES[self.day_of_week][1]} {self.start_time} — {self.subject}"
 
-    @property
-    def end_time(self):
-        dt_start = datetime.combine(datetime.today(), self.start_time)
-        dt_end = dt_start + timedelta(minutes=self.duration_minutes)
-        return dt_end.time()
+    def clean(self):
+        from users.models import UserSubject, UserGrade
+        user = self.teacher
+        is_superuser = getattr(user, "is_superuser", False)
+        role = getattr(user, "role", None)
 
-# Реальный урок (в расписании) с датой, темой, ссылкой на шаблон и фактической темой
+        # Проверка: входит ли день/время в доступное расписание
+        available = TeacherAvailability.objects.filter(
+            teacher=user,
+            day_of_week=self.day_of_week,
+            start_time__lte=self.start_time,
+            end_time__gte=self.get_end_time()
+        ).exists()
+
+        if not available:
+            if is_superuser or role in ["DIRECTOR", "HEAD_TEACHER"]:
+                print(f"⚠️ Предупреждение: {user} вне времени занятости")
+            else:
+                raise ValidationError("Учитель недоступен в это время")
+
+        # Проверка: преподаватель должен быть привязан к предмету
+        if not UserSubject.objects.filter(teacher=self.teacher, subject=self.subject).exists():
+            if is_superuser or role in ["DIRECTOR", "HEAD_TEACHER"]:
+                print(f"⚠️ Предупреждение: {user} не привязан к предмету {self.subject}")
+            else:
+                raise ValidationError("Учитель не привязан к данному предмету")
+
+        # Проверка: преподаватель должен быть привязан к классу
+        if not UserGrade.objects.filter(teacher=self.teacher, grade=self.grade).exists():
+            if is_superuser or role in ["DIRECTOR", "HEAD_TEACHER"]:
+                print(f"⚠️ Предупреждение: {user} не привязан к классу {self.grade}")
+            else:
+                raise ValidationError("Учитель не привязан к данному классу")
+
+    def get_end_time(self):
+        from datetime import timedelta, datetime
+        start = datetime.combine(datetime.today(), self.start_time)
+        return (start + timedelta(minutes=self.duration_minutes)).time()
+
+#Реальный урок в расписании
 class RealLesson(models.Model):
     date = models.DateField()
+    day_of_week = models.IntegerField(choices=DAY_CHOICES)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'role': 'TEACHER'})
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={"role": "TEACHER"}
+    )
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     start_time = models.TimeField()
-    end_time = models.TimeField()
+    duration_minutes = models.PositiveSmallIntegerField(default=45)
     topic = models.CharField(max_length=255, blank=True)
     theme_from_ktp = models.CharField(max_length=255, blank=True)
-    template_lesson = models.ForeignKey(TemplateLesson, on_delete=models.SET_NULL, null=True, blank=True)
+    template_lesson = models.ForeignKey('TemplateLesson', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         ordering = ["date", "start_time"]
 
     def __str__(self):
         return f"{self.date} {self.grade} — {self.subject}"
+
+    @property
+    def end_time(self):
+        from datetime import timedelta, datetime
+        start = datetime.combine(self.date, self.start_time)
+        return (start + timedelta(minutes=self.duration_minutes)).time()
