@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
-from datetime import timedelta, datetime
+#from datetime import timedelta, datetime
 from django.core.exceptions import ValidationError
+
 
 # Дни недели: используется для выбора дня в расписании
 DAY_CHOICES = (
@@ -41,7 +42,14 @@ class Subject(models.Model):
 class WeeklyNorm(models.Model):
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    hours_per_week = models.PositiveSmallIntegerField()
+
+    hours_per_week = models.PositiveSmallIntegerField(help_text="Всего часов в неделю по предмету")
+    lessons_per_week = models.PositiveSmallIntegerField(default=0, help_text="Уроков с учителем")
+    courses_per_week = models.PositiveSmallIntegerField(default=0, help_text="Самостоятельных занятий (курсов)")
+
+    class Meta:
+        unique_together = ("grade", "subject")
+        ordering = ["grade", "subject"]
 
     def __str__(self):
         return f"{self.grade} — {self.subject}: {self.hours_per_week} ч/нед"
@@ -67,6 +75,9 @@ class TeacherAvailability(models.Model):
 # Шаблон недели (например, "Неделя №1") — основа для генерации расписания
 class TemplateWeek(models.Model):
     name = models.CharField(max_length=100, help_text="Название шаблона (например: Неделя №1)")
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
@@ -158,3 +169,90 @@ class RealLesson(models.Model):
         from datetime import timedelta, datetime
         start = datetime.combine(self.date, self.start_time)
         return (start + timedelta(minutes=self.duration_minutes)).time()
+
+
+# Шаблон КТП — объединяет тему, класс и учебный год.
+# Пример: "КТП по математике 5А 2024–2025"
+class KTPTemplate(models.Model):
+    last_template_week_used = models.ForeignKey(
+        'TemplateWeek', null=True, blank=True, on_delete=models.SET_NULL,
+        help_text="Шаблон недели, по которому последний раз были распределены даты"
+    )
+
+    subject = models.ForeignKey('Subject', on_delete=models.CASCADE, related_name='ktp_templates')
+    grade = models.ForeignKey('Grade', on_delete=models.CASCADE, related_name='ktp_templates')
+    academic_year = models.ForeignKey('AcademicYear', on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)  # Например: "КТП по математике 5А"
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+# Раздел внутри шаблона КТП.
+# Пример: "Тема 1: Натуральные числа", "Раздел 2: Геометрия"
+class KTPSection(models.Model):
+    ktp_template = models.ForeignKey(KTPTemplate, on_delete=models.CASCADE, related_name='sections')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    order = models.PositiveIntegerField()
+    hours = models.PositiveIntegerField(default=0)  # 🆕 Кол-во часов в разделе
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+# Конкретная запись КТП — одно занятие/урок.
+# Пример: "Урок 1: Сложение натуральных чисел"
+class KTPEntry(models.Model):
+    LESSON_TYPE_CHOICES = [
+        ('lesson', 'Урок'),
+        ('course', 'Курс'),
+    ]
+
+    section = models.ForeignKey(KTPSection, on_delete=models.CASCADE, related_name='entries')
+    lesson_number = models.PositiveIntegerField(default=1)  # 🆕 Номер урока в разделе
+    type = models.CharField(max_length=10, choices=LESSON_TYPE_CHOICES, default='lesson')  # 🆕 Тип записи
+
+    planned_date = models.DateField(blank=True, null=True)  # 🆕 Дата по плану
+    actual_date = models.DateField(blank=True, null=True)  # 🆕 Дата по факту
+
+    title = models.CharField(max_length=255)
+    objectives = models.TextField(blank=True, null=True)
+    tasks = models.TextField(blank=True, null=True)
+    homework = models.TextField(blank=True, null=True)
+    materials = models.TextField(blank=True, null=True)
+
+    planned_outcomes = models.TextField(blank=True, null=True)  # 🆕 Планируемые результаты
+    motivation = models.TextField(blank=True, null=True)        # 🆕 Мотивация
+
+    order = models.PositiveIntegerField()
+
+    template_lesson = models.ForeignKey(
+        'TemplateLesson',  # строкой — если TemplateLesson ниже в файле
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title
+
+class TemplateWeekDraft(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    base_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE)
+    data = models.JSONField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Draft by {self.user} for {self.base_week.name}"

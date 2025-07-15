@@ -1,10 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+
+{% block content %}
 <h1>📅 Шаблонная неделя</h1>
 
 <form method="post">
@@ -16,8 +12,7 @@
 <h2>Список уроков</h2>
 <ul>
   {% for lesson in lessons %}
-    <li>{{ lesson.day_of_week }}: {{ lesson.grade }} — {{ lesson.subject }} ({{ lesson.start_time }} - {{ lesson.end_time }})</li>
+    <li>{{ lesson.get_day_of_week_display|slice:":2" }}: {{ lesson.grade }} — {{ lesson.subject }} ({{ lesson.start_time }} - {{ lesson.end_time }})</li>
   {% endfor %}
 </ul>
-</body>
-</html>
+{% endblock %}

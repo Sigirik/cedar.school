@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Реальное расписание</h2>
+  {% if lessons %}
+    <ul>
+      {% for lesson in lessons %}
+        <li>
+          {{ lesson.date }} — {{ lesson.start_time }} ({{ lesson.duration_minutes }} мин): 
+          {{ lesson.subject }} с {{ lesson.teacher }} в {{ lesson.grade }}
+          {% if lesson.topic %} — <strong>{{ lesson.topic }}</strong>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>Уроки не найдены.</p>
+  {% endif %}
+{% endblock %}
