@@ -1,70 +1,139 @@
-import React, { useEffect, useState } from 'react';
-import { Button, message, Table } from 'antd';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-
-interface Lesson {
-  id: number;
-  subject: string;
-  teacher: string;
-  day: string;
-  time: string;
-  class_name: string;
-}
-
-interface TemplateWeek {
-  id: number;
-  name: string;
-  school_year: string;
-  lessons: Lesson[];
-}
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 const ActiveTemplateWeekView: React.FC = () => {
-  const [activeWeek, setActiveWeek] = useState<TemplateWeek | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
+  const [activeWeek, setActiveWeek] = useState<any>(null);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [weeklyNorms, setWeeklyNorms] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchActiveWeek = async () => {
+    async function fetchData() {
       try {
-        const response = await axios.get('/api/template-week/active/');
-        setActiveWeek(response.data);
-      } catch (error) {
-        message.error('Не удалось загрузить активную неделю.');
-      } finally {
-        setLoading(false);
+        const weekRes = await axios.get("/schedule/api/ktp/template-week/active/");
+        setActiveWeek(weekRes.data);
+      } catch (err) {
+        console.warn("Нет активной недели или ошибка:", err);
+        setActiveWeek(null);
       }
-    };
-    fetchActiveWeek();
+
+      try {
+        const [subjectsRes, gradesRes, teachersRes, normsRes] = await Promise.all([
+          axios.get("/schedule/api/ktp/subjects/"),
+          axios.get("/schedule/api/ktp/grades/"),
+          axios.get("/schedule/api/ktp/teachers/"),
+          axios.get("/schedule/api/ktp/weekly-norms/")
+        ]);
+
+        setSubjects(subjectsRes.data);
+        setGrades(gradesRes.data);
+        setTeachers(teachersRes.data);
+        setWeeklyNorms(normsRes.data);
+      } catch (err) {
+        console.error("Ошибка загрузки справочников:", err);
+      }
+    }
+
+    fetchData();
   }, []);
 
-  const handleEdit = () => {
-    navigate('/template-week/draft/edit');
+  const weekdayLabel = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.name || id;
+  const getGradeName = (id: number) => grades.find(g => g.id === id)?.name || id;
+  const getTeacherName = (id: number) => teachers.find(t => t.id === id)?.username || id;
+
+  const getNorm = (gradeId: number, subjectId: number) => {
+    return weeklyNorms.find(norm =>
+      Number(norm.grade) === Number(gradeId) &&
+      Number(norm.subject) === Number(subjectId)
+    );
   };
 
-  const columns = [
-    { title: 'День', dataIndex: 'day', key: 'day' },
-    { title: 'Время', dataIndex: 'time', key: 'time' },
-    { title: 'Предмет', dataIndex: 'subject', key: 'subject' },
-    { title: 'Учитель', dataIndex: 'teacher', key: 'teacher' },
-    { title: 'Класс', dataIndex: 'class_name', key: 'class_name' },
-  ];
+  const countLessons = (gradeId: number, subjectId: number) => {
+    return (activeWeek?.lessons || []).filter(
+      l => l.grade === gradeId && l.subject === subjectId
+    ).length;
+  };
+
+  const handleRedirectToEditor = () => {
+    window.location.href = "/template-week/draft/edit";
+  };
+
+  const activeLessons = activeWeek?.lessons || [];
 
   return (
-    <div>
-      <h2>Текущая активная шаблонная неделя</h2>
-      <p><strong>{activeWeek?.name}</strong> — {activeWeek?.school_year}</p>
-      <Button type="primary" onClick={handleEdit}>
-        Редактировать шаблон
-      </Button>
-      <Table
-        columns={columns}
-        dataSource={activeWeek?.lessons || []}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-        style={{ marginTop: 20 }}
-      />
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Активная шаблонная неделя</h1>
+
+      {activeWeek ? (
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold flex items-center mb-2">
+            <span className="text-green-600 text-xl mr-2">🟩</span>
+            Активная неделя
+          </h2>
+          <button
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            onClick={handleRedirectToEditor}
+          >
+            ✏️ Редактировать шаблон
+          </button>
+
+          {activeLessons.length > 0 ? (
+            <table className="table-auto w-full border text-sm mt-4">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border px-2">Предмет</th>
+                  <th className="border px-2">Класс</th>
+                  <th className="border px-2">Учитель</th>
+                  <th className="border px-2">День</th>
+                  <th className="border px-2">Время</th>
+                  <th className="border px-2">Длительность</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeLessons.map((lesson: any) => {
+                  const norm = getNorm(lesson.grade, lesson.subject);
+                  const lessonCount = countLessons(lesson.grade, lesson.subject);
+
+                  const rowClass = norm
+                    ? lessonCount > norm.lessons_per_week
+                      ? "bg-red-200"
+                      : lessonCount < norm.lessons_per_week
+                      ? "bg-yellow-200"
+                      : ""
+                    : "";
+
+                  return (
+                    <tr key={lesson.id} className={rowClass}>
+                      <td
+                        className="border px-2"
+                        title={
+                          norm
+                            ? `План: ${norm.hours_per_week} ч/нед (уроков: ${norm.lessons_per_week}, курсов: ${norm.courses_per_week})`
+                            : "Нет нормы"
+                        }
+                      >
+                        {getSubjectName(lesson.subject)}
+                      </td>
+                      <td className="border px-2">{getGradeName(lesson.grade)}</td>
+                      <td className="border px-2">{getTeacherName(lesson.teacher)}</td>
+                      <td className="border px-2">{weekdayLabel[lesson.day_of_week]}</td>
+                      <td className="border px-2">{lesson.start_time}</td>
+                      <td className="border px-2">{lesson.duration_minutes}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-gray-500 mt-2">Нет уроков в активной неделе.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-gray-500">Нет активной недели.</p>
+      )}
     </div>
   );
 };

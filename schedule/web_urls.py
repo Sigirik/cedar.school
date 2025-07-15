@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import (
+from .web_views import (
     template_week_view,
     real_lesson_create_view,
     real_lesson_list_view,
@@ -12,5 +12,4 @@ urlpatterns = [
     path("real-lesson/create/", real_lesson_create_view, name="real_lesson_create"),
     path("real-lessons/", real_lesson_list_view, name="real_lesson_list"),
     path("api/template-lesson/<int:pk>/", template_lesson_detail_json, name="template_lesson_detail_json"),
-    path("api/ktp/", include("schedule.ktp_api_urls")),
 ]

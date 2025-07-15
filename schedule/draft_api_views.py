@@ -1,10 +1,13 @@
+# draft_api_views.py — API логика работы с черновиком шаблонной недели
 
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
+
 from .models import TemplateWeekDraft, TemplateWeek, TemplateLesson
-from .serializers import TemplateWeekDraftSerializer, TemplateWeekDetailSerializer
+from .serializers import TemplateWeekDraftSerializer, TemplateWeekDetailSerializer, TemplateLessonSerializer
 
 
 class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
@@ -50,29 +53,23 @@ class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
 
         return Response({"message": "Шаблон успешно сохранён как новая активная версия."}, status=status.HTTP_201_CREATED)
 
-from rest_framework.decorators import api_view
-
-
-@api_view(["GET"])
-def active_template_week(request):
-    active = TemplateWeek.objects.filter(is_active=True).first()
-    if not active:
-        return Response({"detail": "Нет активной недели."}, status=404)
-    return Response(TemplateWeekDetailSerializer(active).data)
 
 @api_view(["POST"])
 def create_draft_from_template(request, template_id):
     template = get_object_or_404(TemplateWeek, id=template_id)
     draft = TemplateWeekDraft.objects.create(
-        base_week=template.id,
+        base_week=template,
+        user=request.user,
         data={"lessons": TemplateLessonSerializer(template.lessons.all(), many=True).data}
     )
     return Response(TemplateWeekDraftSerializer(draft).data, status=201)
+
 
 @api_view(["POST"])
 def create_empty_draft(request):
     draft = TemplateWeekDraft.objects.create(
         base_week=None,
+        user=request.user,git add .
         data={"lessons": []}
     )
     return Response(TemplateWeekDraftSerializer(draft).data, status=201)

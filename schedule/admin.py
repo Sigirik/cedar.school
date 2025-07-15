@@ -10,6 +10,7 @@ from .models import (
     KTPTemplate,
     KTPSection,
     KTPEntry,
+    TemplateWeekDraft,
 )
 from .forms import TemplateLessonForm
 from .models import TemplateWeek
@@ -36,6 +37,7 @@ admin.site.register(Subject)
 admin.site.register(WeeklyNorm)
 admin.site.register(TeacherAvailability)
 admin.site.register(RealLesson)
+admin.site.register(TemplateWeekDraft)
 
 class KTPEntryInline(admin.TabularInline):
     model = KTPEntry

@@ -44,9 +44,11 @@ class TemplateWeekDetailSerializer(serializers.ModelSerializer):
         return TemplateLessonSerializer(lessons, many=True).data
 
 class TemplateWeekSerializer(serializers.ModelSerializer):
+    lessons = TemplateLessonSerializer(many=True, read_only=True)
+
     class Meta:
         model = TemplateWeek
-        fields = "__all__"
+        fields = ['id', 'name', 'academic_year', 'created_at', 'is_active', 'lessons']
 
 from .models import Subject, Grade
 from django.contrib.auth import get_user_model

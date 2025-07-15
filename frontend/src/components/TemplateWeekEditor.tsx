@@ -20,17 +20,17 @@ const TemplateWeekEditor: React.FC = () => {
   const navigate = useNavigate();
 
   // При монтировании — копировать активную неделю в черновик
-  useEffect(() => {
-    const cloneActiveWeek = async () => {
-      try {
-        await axios.post('/api/template-week/active/clone_to_draft/', { force: true });
-        message.success('Черновик создан из активной недели.');
-      } catch (error) {
-        message.error('Не удалось создать черновик из активной недели.');
-      }
-    };
-    cloneActiveWeek();
-  }, []);
+    useEffect(() => {
+      const cloneActiveWeek = async () => {
+        try {
+          const res = await axios.post('/api/template-week/active/clone_to_draft/', { force: true });
+          console.log("✅ Клонирование сработало:", res.data);
+        } catch (error) {
+          console.error("❌ Ошибка при клонировании:", error);
+        }
+      };
+      cloneActiveWeek();
+    }, []);
 
   const fetchHistoricalTemplates = async () => {
     try {

@@ -21,5 +21,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("users/", include("users.urls")),
     path('accounts/', include('django.contrib.auth.urls')),
-    path('schedule/', include('schedule.urls')),
+    path("schedule/", include("schedule.web_urls")),  # HTML-страницы
+    path("api/template/", include("schedule.template_api_urls")),
+    path("api/ktp/", include("schedule.ktp_api_urls")),
+    path("api/draft/", include("schedule.draft_api_urls")),
 ]

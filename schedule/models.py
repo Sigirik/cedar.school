@@ -84,7 +84,7 @@ class TemplateWeek(models.Model):
 
 # Урок в шаблоне недели — используется для построения расписания
 class TemplateLesson(models.Model):
-    template_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE)
+    template_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE, related_name="lessons")
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(

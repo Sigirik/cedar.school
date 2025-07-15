@@ -1,14 +1,15 @@
-
 from rest_framework.routers import DefaultRouter
-from .draft_api_views import TemplateWeekDraftViewSet
+from django.urls import path
+from .draft_api_views import (
+    TemplateWeekDraftViewSet,
+    create_draft_from_template,
+    create_empty_draft,
+)
 
 router = DefaultRouter()
 router.register("template-drafts", TemplateWeekDraftViewSet, basename="template-draft")
 
-urlpatterns = router.urls
-
-from .ktp_api_views import SubjectViewSet, GradeViewSet, TeacherViewSet
-
-router.register(r"subjects", SubjectViewSet)
-router.register(r"grades", GradeViewSet)
-router.register(r"teachers", TeacherViewSet)
+urlpatterns = [
+    path("template-drafts/create-from/<int:template_id>/", create_draft_from_template),
+    path("template-drafts/create-empty/", create_empty_draft),
+] + router.urls
