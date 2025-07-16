@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import WeekViewSwitcher from './WeekViewSwitcher';
 
 const ActiveTemplateWeekView: React.FC = () => {
   const [activeWeek, setActiveWeek] = useState<any>(null);
@@ -11,7 +12,7 @@ const ActiveTemplateWeekView: React.FC = () => {
   useEffect(() => {
     async function fetchData() {
       try {
-        const weekRes = await axios.get("/schedule/api/ktp/template-week/active/");
+        const weekRes = await axios.get("/api/template/template-week/active/");
         setActiveWeek(weekRes.data);
       } catch (err) {
         console.warn("Нет активной недели или ошибка:", err);
@@ -20,16 +21,22 @@ const ActiveTemplateWeekView: React.FC = () => {
 
       try {
         const [subjectsRes, gradesRes, teachersRes, normsRes] = await Promise.all([
-          axios.get("/schedule/api/ktp/subjects/"),
-          axios.get("/schedule/api/ktp/grades/"),
-          axios.get("/schedule/api/ktp/teachers/"),
-          axios.get("/schedule/api/ktp/weekly-norms/")
+          axios.get("/api/ktp/subjects/"),
+          axios.get("/api/ktp/grades/"),
+          axios.get("/api/ktp/teachers/"),
+          axios.get("/api/ktp/weekly-norms/")
         ]);
 
         setSubjects(subjectsRes.data);
         setGrades(gradesRes.data);
         setTeachers(teachersRes.data);
         setWeeklyNorms(normsRes.data);
+
+        console.log("🎯 Справочники загружены:", {
+          subjects: subjectsRes.data,
+          grades: gradesRes.data,
+          teachers: teachersRes.data
+        });
       } catch (err) {
         console.error("Ошибка загрузки справочников:", err);
       }
@@ -58,7 +65,7 @@ const ActiveTemplateWeekView: React.FC = () => {
   };
 
   const handleRedirectToEditor = () => {
-    window.location.href = "/template-week/draft/edit";
+    window.location.href = "/template-week/draft/edit/";
   };
 
   const activeLessons = activeWeek?.lessons || [];
@@ -129,6 +136,17 @@ const ActiveTemplateWeekView: React.FC = () => {
             </table>
           ) : (
             <p className="text-gray-500 mt-2">Нет уроков в активной неделе.</p>
+          )}
+
+          {subjects.length && grades.length && teachers.length ? (
+            <WeekViewSwitcher
+              source="active"
+              subjects={subjects}
+              grades={grades}
+              teachers={teachers}
+            />
+          ) : (
+            <p className="text-gray-400 mt-4">Загрузка представлений…</p>
           )}
         </div>
       ) : (

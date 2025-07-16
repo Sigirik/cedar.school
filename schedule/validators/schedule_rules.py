@@ -28,7 +28,7 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
     warnings = []
     by_teacher = {}
     by_grade = {}
-    by_subject_grade = {}
+    by_subject_grade_type = {}
 
     teacher_cache = {}
 
@@ -36,6 +36,7 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
         teacher_id = lesson.get("teacher")
         grade_id = lesson.get("grade")
         subject_id = lesson.get("subject")
+        lesson_type = lesson.get("type", "lesson")
         start_time_str = lesson.get("start_time")
         duration = lesson.get("duration_minutes")
         day = lesson.get("day_of_week")
@@ -52,7 +53,7 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
 
         by_teacher.setdefault((teacher_id, day), []).append((start_time, end_time))
         by_grade.setdefault((grade_id, day), []).append((start_time, end_time))
-        by_subject_grade[(grade_id, subject_id)] = by_subject_grade.get((grade_id, subject_id), 0) + 1
+        by_subject_grade_type[(grade_id, subject_id, lesson_type)] = by_subject_grade_type.get((grade_id, subject_id, lesson_type), 0) + 1
 
         # 🔍 Проверка связей учителя
         if check_user_links:
@@ -90,15 +91,20 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
         if has_conflict(times):
             errors.append(f"⛔ Пересечение у класса {grade} в день {day}")
 
-    # Проверка норм по (grade, subject)
+    # Проверка норм по (grade, subject, type)
     if weekly_norms:
         norm_map = {
-            (n["grade"], n["subject"]): n["lessons_per_week"]
+            (n["grade"], n["subject"]): {
+                "lesson": n.get("lessons_per_week", 0),
+                "course": n.get("courses_per_week", 0)
+            }
             for n in weekly_norms
         }
-        for key, count in by_subject_grade.items():
-            expected = norm_map.get(key)
-            if expected is not None and count > expected:
-                warnings.append(f"⚠️ {key}: {count} уроков, норма — {expected}")
+        for (grade, subject, lesson_type), count in by_subject_grade_type.items():
+            expected = norm_map.get((grade, subject), {}).get(lesson_type, 0)
+            if expected and count != expected:
+                warnings.append(
+                    f"⚠️ {grade} — {subject} ({'уроки' if lesson_type == 'lesson' else 'курсы'}): {count} из {expected}"
+                )
 
     return errors, warnings

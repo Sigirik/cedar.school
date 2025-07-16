@@ -1,5 +1,6 @@
-from rest_framework import serializers
+from rest_framework import serializers, viewsets
 from .models import KTPTemplate, KTPSection, KTPEntry, TemplateWeekDraft, TemplateWeek, TemplateLesson, WeeklyNorm
+from schedule.models import TeacherAvailability
 
 class KTPEntrySerializer(serializers.ModelSerializer):
     class Meta:
@@ -84,3 +85,10 @@ class WeeklyNormSerializer(serializers.ModelSerializer):
             "lessons_per_week",
             "courses_per_week"
         ]
+
+class TeacherAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherAvailability
+        fields = ['id', 'teacher', 'day_of_week', 'start_time', 'end_time']
+
+

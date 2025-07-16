@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import TemplateWeekCalendar from './TemplateWeekCalendar';
 import WeekViewByGrade from './WeekViewByGrade';
+import WeekViewSwitcher from './WeekViewSwitcher';
 
 interface TemplateWeek {
   id: number;
@@ -104,6 +105,7 @@ const TemplateWeekEditor: React.FC = () => {
       </div>
       {draftId && <TemplateWeekCalendar draftId={draftId} />}
       {draftId && <WeekViewByGrade draftId={draftId} />}
+      {draftId && <WeekViewSwitcher draftId={draftId} />}
 
       <Modal
         title="Выбор шаблона для импорта"

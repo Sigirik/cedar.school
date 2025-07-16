@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/schedule': 'http://localhost:8000',
+      '/api': 'http://localhost:8000',
     },
   },
 });

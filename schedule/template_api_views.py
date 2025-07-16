@@ -5,9 +5,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from datetime import datetime
+from schedule.models import TeacherAvailability
 
 from .models import TemplateWeek, TemplateLesson
-from .serializers import TemplateWeekSerializer, TemplateWeekDetailSerializer
+from .serializers import TemplateWeekSerializer, TemplateWeekDetailSerializer, TeacherAvailabilitySerializer
 
 
 class ActiveTemplateWeekView(APIView):
@@ -17,6 +18,10 @@ class ActiveTemplateWeekView(APIView):
             return Response({"detail": "No active template week found."}, status=404)
         data = TemplateWeekDetailSerializer(active_week).data
         return Response(data)
+
+class TeacherAvailabilityViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = TeacherAvailability.objects.select_related('teacher').all()
+    serializer_class = TeacherAvailabilitySerializer
 
 
 class TemplateWeekViewSet(viewsets.ModelViewSet):
