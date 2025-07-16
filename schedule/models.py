@@ -95,6 +95,12 @@ class TemplateLesson(models.Model):
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
     duration_minutes = models.PositiveIntegerField(default=45)
+    type = models.CharField(
+        max_length=10,
+        choices=[('lesson', 'Урок'), ('course', 'Курс')],
+        default='lesson',
+        help_text="Тип занятия: lesson — с учителем, course — самостоятельное"
+    )
 
     class Meta:
         ordering = ["day_of_week", "start_time"]

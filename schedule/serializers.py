@@ -30,7 +30,7 @@ class TemplateWeekDraftSerializer(serializers.ModelSerializer):
 class TemplateLessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = TemplateLesson
-        fields = ["id", "subject", "grade", "teacher", "day_of_week", "start_time", "duration_minutes"]
+        fields = ["id", "subject", "grade", "teacher", "day_of_week", "start_time", "duration_minutes", "type"]
 
 class TemplateWeekDetailSerializer(serializers.ModelSerializer):
     lessons = serializers.SerializerMethodField()

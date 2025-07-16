@@ -8,7 +8,9 @@ from django.shortcuts import get_object_or_404
 
 from .models import TemplateWeekDraft, TemplateWeek, TemplateLesson
 from .serializers import TemplateWeekDraftSerializer, TemplateWeekDetailSerializer, TemplateLessonSerializer
-
+from schedule.validators.schedule_rules import validate_schedule
+from schedule.serializers import WeeklyNormSerializer
+from schedule.models import WeeklyNorm
 
 class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
     queryset = TemplateWeekDraft.objects.all()
@@ -24,6 +26,17 @@ class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def commit(self, request, pk=None):
         draft = self.get_object()
+        #Проверяем на пересечения
+        weekly_norms = WeeklyNormSerializer(WeeklyNorm.objects.all(), many=True).data
+        errors, warnings = validate_schedule(
+            draft.data.get("lessons", []),
+            weekly_norms,
+            check_user_links=True
+        )
+
+        if errors:
+            return Response({"errors": errors}, status=400)
+        # warnings можно вернуть во фронт, если нужно
 
         # Деактивируем текущий шаблон
         TemplateWeek.objects.filter(is_active=True).update(is_active=False)
@@ -69,7 +82,7 @@ def create_draft_from_template(request, template_id):
 def create_empty_draft(request):
     draft = TemplateWeekDraft.objects.create(
         base_week=None,
-        user=request.user,git add .
+        user=request.user,
         data={"lessons": []}
     )
     return Response(TemplateWeekDraftSerializer(draft).data, status=201)

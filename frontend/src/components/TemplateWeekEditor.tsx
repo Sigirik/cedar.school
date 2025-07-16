@@ -1,9 +1,10 @@
-// TemplateWeekEditor.tsx (теперь только редактор черновика)
-
+// TemplateWeekEditor.tsx - редактор черновика
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, message } from 'antd';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import TemplateWeekCalendar from './TemplateWeekCalendar';
+import WeekViewByGrade from './WeekViewByGrade';
 
 interface TemplateWeek {
   id: number;
@@ -17,20 +18,23 @@ const TemplateWeekEditor: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [draftId, setDraftId] = useState<number | null>(null);
   const navigate = useNavigate();
 
-  // При монтировании — копировать активную неделю в черновик
-    useEffect(() => {
-      const cloneActiveWeek = async () => {
-        try {
-          const res = await axios.post('/api/template-week/active/clone_to_draft/', { force: true });
-          console.log("✅ Клонирование сработало:", res.data);
-        } catch (error) {
-          console.error("❌ Ошибка при клонировании:", error);
-        }
-      };
-      cloneActiveWeek();
-    }, []);
+  // 🔄 При монтировании — создать пустой черновик
+  useEffect(() => {
+    const createInitialDraft = async () => {
+      try {
+        const res = await axios.post('/api/draft/template-drafts/create-empty/');
+        setDraftId(res.data.id);
+        console.log("✅ Пустой черновик создан:", res.data);
+      } catch (err) {
+        message.error("Ошибка при создании черновика.");
+        console.error(err);
+      }
+    };
+    createInitialDraft();
+  }, []);
 
   const fetchHistoricalTemplates = async () => {
     try {
@@ -54,12 +58,10 @@ const TemplateWeekEditor: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await axios.post(`/api/template-week/${selectedTemplateId}/clone_to_draft/`, {
-        force: true,
-      });
+      const res = await axios.post(`/api/draft/template-drafts/create-from/${selectedTemplateId}/`);
       message.success('Черновик обновлён из шаблона.');
+      setDraftId(res.data.id);
       setIsModalVisible(false);
-      // можно перезагрузить страницу или данные черновика
     } catch (error: any) {
       if (error.response?.status === 409) {
         message.warning('Уже существует черновик.');
@@ -71,14 +73,41 @@ const TemplateWeekEditor: React.FC = () => {
     }
   };
 
+  const handlePublish = async () => {
+    if (!draftId) {
+      message.error("Нет активного черновика.");
+      return;
+    }
+
+    const confirm = window.confirm("Опубликовать этот черновик как новую активную неделю?");
+    if (!confirm) return;
+
+    try {
+      await axios.post(`/api/draft/template-drafts/${draftId}/commit/`);
+      message.success("Черновик опубликован.");
+      navigate("/template-week/active");
+    } catch (err) {
+      message.error("Ошибка при публикации.");
+      console.error(err);
+    }
+  };
+
   return (
-    <div>
-      <h2>Редактирование шаблонной недели (черновик)</h2>
-      <Button onClick={handleImportClick}>Импортировать из другого шаблона</Button>
+    <div className="p-4">
+      <h2 className="text-xl font-semibold mb-4">Редактирование шаблонной недели (черновик)</h2>
+
+      <div className="mb-4 space-x-2">
+        <Button onClick={handleImportClick}>Импортировать из другого шаблона</Button>
+        <Button type="primary" disabled={!draftId} onClick={handlePublish}>
+          Опубликовать
+        </Button>
+      </div>
+      {draftId && <TemplateWeekCalendar draftId={draftId} />}
+      {draftId && <WeekViewByGrade draftId={draftId} />}
 
       <Modal
         title="Выбор шаблона для импорта"
-        visible={isModalVisible}
+        open={isModalVisible}
         onOk={handleClone}
         onCancel={() => setIsModalVisible(false)}
         confirmLoading={isLoading}

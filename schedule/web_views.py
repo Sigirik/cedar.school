@@ -3,7 +3,9 @@ from .models import RealLesson, TemplateLesson
 from .forms import TemplateLessonForm, RealLessonForm
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_GET
-
+from schedule.validators.schedule_rules import validate_schedule
+from schedule.models import WeeklyNorm
+from schedule.serializers import WeeklyNormSerializer
 
 def template_week_view(request):
     lessons = TemplateLesson.objects.all()
@@ -31,6 +33,48 @@ def real_lesson_list_view(request):
 def real_lesson_create_view(request):
     form = RealLessonForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        new_lesson = form.save(commit=False)
+
+        # Загружаем все уроки этого дня и класса
+        existing_lessons = RealLesson.objects.filter(
+            date=new_lesson.date,
+            grade=new_lesson.grade
+        )
+
+        serialized = [{
+            "subject": l.subject_id,
+            "teacher": l.teacher_id,
+            "grade": l.grade_id,
+            "day_of_week": l.day_of_week,
+            "start_time": l.start_time.strftime("%H:%M"),
+            "duration_minutes": l.duration_minutes,
+        } for l in existing_lessons]
+
+        # Добавляем новый урок в список
+        serialized.append({
+            "subject": new_lesson.subject_id,
+            "teacher": new_lesson.teacher_id,
+            "grade": new_lesson.grade_id,
+            "day_of_week": new_lesson.day_of_week,
+            "start_time": new_lesson.start_time.strftime("%H:%M"),
+            "duration_minutes": new_lesson.duration_minutes,
+        })
+
+        weekly_norms = WeeklyNormSerializer(WeeklyNorm.objects.all(), many=True).data
+        errors, warnings = validate_schedule(
+            serialized,
+            weekly_norms,
+            check_user_links=True
+        )
+
+        if errors:
+            form.add_error(None, "\n".join(errors))
+            return render(request, 'schedule/real_lesson_form.html', {'form': form})
+
+        if warnings:
+            if not request.POST.get("confirm_norm_override"):
+                form.add_error(None, "\n".join(warnings) + "\n\nПодтвердите добавление урока сверх нормы.")
+                return render(request, 'schedule/real_lesson_form.html', {'form': form})
         form.save()
         return redirect('real_lesson_list')
     return render(request, 'schedule/real_lesson_form.html', {'form': form})
