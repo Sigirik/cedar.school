@@ -1,6 +1,3 @@
-// Переключает режимы: по классам 🏫, по учителям 👩‍🏫, по нормам 📊
-// Использует lessons, weeklyNorms, переданные из ActiveTemplateWeekView.tsx
-// Компоненты WeekViewByGrade, WeekViewByTeacher, WeekNormSummary теперь чисто отображающие
 import React, { useState } from 'react';
 import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewByTeacher from './WeekViewByTeacher';
@@ -41,8 +38,7 @@ const WeekViewSwitcher: React.FC<{
   grades: ReferenceItem[];
   teachers: ReferenceItem[];
   weeklyNorms: WeeklyNorm[];
-  teacherAvailability: any[];
-}> = ({ lessons, subjects, grades, teachers, weeklyNorms, teacherAvailability }) => {
+}> = ({ lessons, subjects, grades, teachers, weeklyNorms }) => {
   const [mode, setMode] = useState<'grade' | 'teacher' | 'norm'>('grade');
 
   return (
@@ -78,7 +74,7 @@ const WeekViewSwitcher: React.FC<{
       </div>
 
       {mode === 'grade' && <WeekViewByGrade lessons={lessons} />}
-      {mode === 'teacher' && <WeekViewByTeacher lessons={lessons} teacherAvailability={teacherAvailability} />}
+      {mode === 'teacher' && <WeekViewByTeacher lessons={lessons} />}
       {mode === 'norm' && <WeekNormSummary lessons={lessons} weeklyNorms={weeklyNorms} />}
       {/* {mode === 'calendar' && <FullCalendarEditor lessons={lessons} />} */}
     </div>

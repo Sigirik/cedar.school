@@ -1,175 +1,147 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Spin, message } from 'antd';
+// WeekViewByTeacher.tsx
+// 👩‍🏫 Отображает расписание по учителям через FullCalendarTemplateView
+// 📆 Отображает только дни ПН–ПТ (2025-07-07 — 2025-07-11)
+// 🎨 Цвет по статусу норм: светло-красный — over, жёлтый — under, светло-зелёный — ok
+// 🟦 Добавляет фоновую заливку доступности учителя через prop teacherAvailability
+// 👓 Отдельный FullCalendar для каждого учителя
+// ⛔ Без drag-n-drop в активной неделе
+
+import React from 'react';
+import FullCalendarTemplateView from './FullCalendarTemplateView';
 
 interface Lesson {
+  id: number;
   subject: number;
-  teacher: number;
   grade: number;
+  teacher: number;
   day_of_week: number;
   start_time: string;
   duration_minutes: number;
   type?: string;
+  subject_name?: string;
+  grade_name?: string;
+  teacher_name?: string;
+  type_label?: string;
+  type_color?: string;
+  status?: string;
 }
 
-interface ReferenceItem {
-  id: number;
-  name: string;
-  username?: string;
-}
-
-interface Availability {
+interface TeacherAvailability {
   teacher: number;
   day_of_week: number;
   start_time: string;
   end_time: string;
 }
 
-interface WeeklyNorm {
-  subject: number;
-  grade: number;
-  lessons_per_week: number;
-  hours_per_week: number;
-  courses_per_week: number;
-}
+const weekdayMap = [
+  '2025-07-07', // Пн
+  '2025-07-08',
+  '2025-07-09',
+  '2025-07-10',
+  '2025-07-11', // Пт
+];
 
-const weekdayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
-
-const getNameById = (
-  id: number,
-  list?: ReferenceItem[],
-  field: 'name' | 'username' = 'name'
-): string => {
-  if (!Array.isArray(list)) return `—`;
-  const item = list.find(i => i.id === id);
-  return item ? item[field] || `—` : `—`;
+const statusColorMap: Record<string, string> = {
+  over: '#fecaca',
+  under: '#fef08a',
+  ok: '#bbf7d0'
 };
 
 const WeekViewByTeacher: React.FC<{
-  source: 'draft' | 'active';
-  id?: number;
-  subjects: ReferenceItem[];
-  teachers: ReferenceItem[];
-  grades: ReferenceItem[];
-  weeklyNorms?: WeeklyNorm[];
-}> = ({ source, id, subjects, teachers, grades, weeklyNorms = [] }) => {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [teacherIds, setTeacherIds] = useState<number[]>([]);
-  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
-  const [loading, setLoading] = useState(true);
+  lessons: Lesson[];
+  teacherAvailability?: TeacherAvailability[];
+  source?: 'draft' | 'active';
+}> = ({ lessons, teacherAvailability = [], source = 'active' }) => {
+  if (!lessons || lessons.length === 0) return <p className="text-gray-500">Нет уроков</p>;
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const url =
-          source === 'draft'
-            ? `/api/draft/template-drafts/${id}/`
-            : '/api/template/template-week/active/';
-        const res = await axios.get(url);
-        const allLessons: Lesson[] = res.data.lessons || [];
-        const uniqueTeachers = [...new Set(allLessons.map(l => l.teacher))];
-        setTeacherIds(uniqueTeachers);
-        setLessons(allLessons);
-      } catch (e) {
-        message.error('Не удалось загрузить шаблон.');
-      }
-
-      try {
-        const availRes = await axios.get('/api/template/teacher-availability/');
-        setAvailabilities(availRes.data);
-      } catch (e) {
-        console.warn('Нет данных о доступности учителей');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [source, id]);
-
-  const getNorm = (gradeId: number, subjectId: number) => {
-    return weeklyNorms.find(
-      norm => norm.grade === gradeId && norm.subject === subjectId
-    );
-  };
-
-  const getLessonColor = (gradeId: number, subjectId: number) => {
-    const count = lessons.filter(
-      l => l.grade === gradeId && l.subject === subjectId
-    ).length;
-    const norm = getNorm(gradeId, subjectId);
-    if (norm) {
-      if (count > norm.lessons_per_week) return 'bg-red-200';
-      if (count < norm.lessons_per_week) return 'bg-yellow-200';
-    }
-    return '';
-  };
-
-  const isInAvailability = (lesson: Lesson): boolean => {
-    return availabilities.some(av =>
-      av.teacher === lesson.teacher &&
-      av.day_of_week === lesson.day_of_week &&
-      lesson.start_time >= av.start_time &&
-      lesson.start_time < av.end_time
-    );
-  };
-
-  const renderAvailabilityBounds = (teacherId: number, dayIndex: number) => {
-    const bounds = availabilities.filter(
-      av => av.teacher === teacherId && av.day_of_week === dayIndex
-    );
-    if (bounds.length === 0) return null;
-
-    const earliest = bounds[0].start_time;
-    const latest = bounds[bounds.length - 1].end_time;
-
-    return (
-      <div className="text-xs text-gray-500 mt-1">
-        ⏱ Доступ: {earliest.slice(0, 5)} – {latest.slice(0, 5)}
-      </div>
-    );
-  };
-
-  if (loading) return <Spin />;
+  const teacherIds = [...new Set(lessons.map(l => l.teacher))];
+  console.log("👀 Всего teacherAvailability:", teacherAvailability);
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold mb-2">Расписание по учителям</h2>
-      {teacherIds.map(teacher => (
-        <div key={teacher} className="mb-6">
-          <h3 className="text-md font-bold mb-1">👩‍🏫 {getNameById(teacher, teachers, 'username')}</h3>
-          <div className="grid grid-cols-5 gap-4 text-sm">
-            {weekdayLabels.map((day, dayIndex) => {
-              const lessonsOfDay = lessons
-                .filter(l => l.teacher === teacher && l.day_of_week === dayIndex)
-                .sort((a, b) => a.start_time.localeCompare(b.start_time));
+      <h2 className="text-lg font-semibold mb-4">Расписание по учителям</h2>
+      {teacherIds.map((teacherId) => {
+        const teacherLessons = lessons.filter(l => l.teacher === teacherId);
+        const teacherName = teacherLessons[0]?.teacher_name || `Учитель ${teacherId}`;
 
-              return (
-                <div key={dayIndex}>
-                  <div className="font-semibold mb-1">{day}</div>
-                  {renderAvailabilityBounds(teacher, dayIndex)}
-                  {lessonsOfDay.length > 0 ? (
-                    lessonsOfDay.map((l, i) => (
-                      <div
-                        key={i}
-                        className={`mb-1 border px-2 py-1 rounded ${getLessonColor(
-                          l.grade,
-                          l.subject
-                        )} ${isInAvailability(l) ? 'bg-white' : 'bg-gray-200'}`}
-                      >
-                        ⏰ {l.start_time.slice(0, 5)} ⏳ {l.duration_minutes} мин<br />
-                        {l.type === 'course' ? '📗' : '📘'} {getNameById(l.subject, subjects)}<br />
-                        🏫 {getNameById(l.grade, grades)}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-gray-400">—</div>
-                  )}
-                </div>
-              );
-            })}
+        const lessonEvents = teacherLessons.map((l) => {
+          const baseDate = weekdayMap[l.day_of_week];
+          const safeTime = l.start_time.slice(0, 5);
+          const [hour, minute] = safeTime.split(':').map(Number);
+          const startDate = new Date(`${baseDate}T00:00`);
+          startDate.setHours(hour);
+          startDate.setMinutes(minute);
+          const endDate = new Date(startDate.getTime() + l.duration_minutes * 60000);
+
+          const start = startDate.toISOString();
+          const end = endDate.toISOString();
+
+          const emoji = l.type === 'course' ? '📗' : '📘';
+
+          return {
+            id: `lesson-${l.id}`,
+            title: `${l.start_time} · ${l.duration_minutes} мин\n${emoji} ${l.subject_name}\n🏫 ${l.grade_name}`,
+            start,
+            end,
+            backgroundColor: statusColorMap[l.status || 'ok'],
+            textColor: '#111827',
+            borderColor: 'transparent',
+            display: 'block',
+            extendedProps: {
+              status: l.status,
+              durationMin: l.duration_minutes,
+            }
+          };
+        });
+
+        const availabilityEvents = teacherAvailability
+          .filter(a => a.teacher === teacherId)
+          .map((a, idx) => {
+            const dayIndex = (a.day_of_week + 6) % 7;  // 👈 теперь "0" — Пн
+            const baseDate = weekdayMap[dayIndex];
+
+            const cleanStart = a.start_time.slice(0, 5);
+            const cleanEnd = a.end_time.slice(0, 5);
+            const start = `${baseDate}T${cleanStart}`;
+            const end = `${baseDate}T${cleanEnd}`;
+
+            const entry = {
+              id: `availability-${teacherId}-${idx}`,
+              start,
+              end,
+              display: 'background',
+              backgroundColor: '#dbeafe'
+            };
+
+            console.log('🟦 Фоновая доступность:', entry);
+            return entry;
+          });
+
+            const testBackground = {
+              id: `test-bg-${teacherId}`,
+              start: '2025-07-08T10:00:00',  // вторник
+              end: '2025-07-08T12:00:00',
+              display: 'background',
+              backgroundColor: '#93c5fd'  // голубой
+            };
+
+            console.log('🧪 Тестовый фон:', testBackground);
+
+            const events = [...lessonEvents, ...availabilityEvents];;
+
+        return (
+          <div key={teacherId} className="mb-8">
+            <h3 className="text-md font-bold mb-2">👩‍🏫 {teacherName}</h3>
+            <FullCalendarTemplateView
+              events={events}
+              editable={source === 'draft'}
+              onEventClick={(info) => console.log("👆 Клик (учитель):", info.event)}
+              onEventDrop={(info) => console.log("📦 Перемещение (учитель):", info.event)}
+              onEventResize={(info) => console.log("📏 Растяжение (учитель):", info.event)}
+            />
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

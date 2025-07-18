@@ -9,7 +9,7 @@ const AppRouter: React.FC = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/template-week" />} />
         <Route path="/template-week" element={<ActiveTemplateWeekView />} />
-        <Route path="/template-week/draft/edit" element={<TemplateWeekEditor />} />
+        <Route path="/template-week/draft/edit/:draftId" element={<TemplateWeekEditor />} />
       </Routes>
     </Router>
   );

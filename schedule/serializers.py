@@ -69,7 +69,7 @@ class GradeSerializer(serializers.ModelSerializer):
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username"]
+        fields = ["id", "username", "first_name", "last_name"]
 
 class WeeklyNormSerializer(serializers.ModelSerializer):
     grade_name = serializers.CharField(source="grade.name", read_only=True)

@@ -1,124 +1,78 @@
-// Загружает расписание (lessons) и нормы (weekly-norms)
-// Считает:
-// факт / норма по урокам (type === 'lesson')
-// факт / норма по курсам (type === 'course')
-// Строит таблицу с подсветкой отклонений:
-// ✅ если соблюдено
-// ⚠️ если превышено или недобор
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { Table, Tag, Spin, message } from 'antd';
+// Использует переданный массив lessons
+// Считает нормы отдельно по lesson и course
+// Показывает subject_name, grade_name
+// Подсвечивает превышения/недостачи цветом
+import React from 'react';
 
 interface Lesson {
-  grade: string;
-  subject: string;
-  type: 'lesson' | 'course';
+  subject: number;
+  subject_name: string;
+  grade: number;
+  grade_name: string;
+  type?: string;
 }
 
-interface Norm {
-  grade: string;
-  subject: string;
+interface WeeklyNorm {
+  subject: number;
+  grade: number;
   lessons_per_week: number;
+  hours_per_week: number;
   courses_per_week: number;
 }
 
-interface RowData {
-  key: string;
-  grade: string;
-  subject: string;
-  factLessons: number;
-  factCourses: number;
-  normLessons: number;
-  normCourses: number;
-}
+const WeekNormSummary: React.FC<{
+  lessons: Lesson[];
+  weeklyNorms: WeeklyNorm[];
+}> = ({ lessons, weeklyNorms }) => {
+  const gradeIds = [...new Set(lessons.map(l => l.grade))];
 
-const WeekNormSummary: React.FC<{ source: 'draft' | 'active'; id?: number }> = ({ source, id }) => {
-  const [data, setData] = useState<RowData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const url =
-          source === 'draft'
-            ? `/api/draft/template-drafts/${id}/`
-            : '/api/template/template-week/active/';
-        const [lessRes, normRes] = await Promise.all([
-          axios.get(url),
-          axios.get('/api/ktp/weekly-norms/')
-        ]);
-
-        const lessons: Lesson[] = lessRes.data.lessons.map((l: any) => ({
-          grade: l.grade_name || l.grade,
-          subject: l.subject_name || l.subject,
-          type: l.type || 'lesson'
-        }));
-
-        const norms: Norm[] = normRes.data;
-
-        const counts: Record<string, RowData> = {};
-
-        for (const l of lessons) {
-          const key = `${l.grade}-${l.subject}`;
-          if (!counts[key]) {
-            const n = norms.find(n => n.grade === l.grade && n.subject === l.subject);
-            counts[key] = {
-              key,
-              grade: l.grade,
-              subject: l.subject,
-              factLessons: 0,
-              factCourses: 0,
-              normLessons: n?.lessons_per_week || 0,
-              normCourses: n?.courses_per_week || 0,
-            };
-          }
-          if (l.type === 'course') counts[key].factCourses++;
-          else counts[key].factLessons++;
-        }
-
-        setData(Object.values(counts));
-      } catch (e) {
-        message.error('Ошибка при загрузке норм или расписания.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [source, id]);
-
-  const columns = [
-    { title: 'Класс', dataIndex: 'grade', key: 'grade' },
-    { title: 'Предмет', dataIndex: 'subject', key: 'subject' },
-    {
-      title: 'Уроки (факт / норма)',
-      key: 'lessons',
-      render: (_: any, row: RowData) => {
-        const diff = row.factLessons - row.normLessons;
-        return diff === 0 ? (
-          <Tag color="green">✅ {row.factLessons} / {row.normLessons}</Tag>
-        ) : (
-          <Tag color="red">⚠️ {row.factLessons} / {row.normLessons}</Tag>
-        );
-      }
-    },
-    {
-      title: 'Курсы (факт / норма)',
-      key: 'courses',
-      render: (_: any, row: RowData) => {
-        const diff = row.factCourses - row.normCourses;
-        return diff === 0 ? (
-          <Tag color="green">✅ {row.factCourses} / {row.normCourses}</Tag>
-        ) : (
-          <Tag color="red">⚠️ {row.factCourses} / {row.normCourses}</Tag>
-        );
-      }
-    }
-  ];
+  const getLessonsByGradeAndSubject = (grade: number, subject: number, type: 'lesson' | 'course') => {
+    return lessons.filter(
+      l => l.grade === grade && l.subject === subject && (l.type || 'lesson') === type
+    ).length;
+  };
 
   return (
     <div className="p-4">
       <h2 className="text-lg font-semibold mb-2">Сводка по нормам</h2>
-      {loading ? <Spin /> : <Table columns={columns} dataSource={data} pagination={false} size="small" />}
+      {gradeIds.map(gradeId => {
+        const gradeName = lessons.find(l => l.grade === gradeId)?.grade_name;
+        const normsForGrade = weeklyNorms.filter(n => n.grade === gradeId);
+
+        return (
+          <div key={gradeId} className="mb-6">
+            <h3 className="text-md font-bold mb-2">🏫 {gradeName}</h3>
+            <table className="table-auto w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border px-2 py-1">Предмет</th>
+                  <th className="border px-2 py-1">Норма (уроки)</th>
+                  <th className="border px-2 py-1">Факт (уроки)</th>
+                  <th className="border px-2 py-1">Норма (курсы)</th>
+                  <th className="border px-2 py-1">Факт (курсы)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {normsForGrade.map(norm => {
+                  const subjectName = lessons.find(l => l.subject === norm.subject)?.subject_name || `ID ${norm.subject}`;
+                  const lessonCount = getLessonsByGradeAndSubject(gradeId, norm.subject, 'lesson');
+                  const courseCount = getLessonsByGradeAndSubject(gradeId, norm.subject, 'course');
+
+                  return (
+                    <tr key={norm.subject}>
+                      <td className="border px-2 py-1">{subjectName}</td>
+                      <td className="border px-2 py-1">{norm.lessons_per_week}</td>
+                      <td className={`border px-2 py-1 ${lessonCount > norm.lessons_per_week ? 'bg-red-200' : lessonCount < norm.lessons_per_week ? 'bg-yellow-200' : ''}`}>{lessonCount}</td>
+                      <td className="border px-2 py-1">{norm.courses_per_week}</td>
+                      <td className={`border px-2 py-1 ${courseCount > norm.courses_per_week ? 'bg-red-200' : courseCount < norm.courses_per_week ? 'bg-yellow-200' : ''}`}>{courseCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -81,6 +81,14 @@ class TemplateWeek(models.Model):
 
     def __str__(self):
         return self.name
+# Тип урока
+class LessonType(models.Model):
+    key = models.CharField(max_length=32, unique=True)
+    label = models.CharField(max_length=64)
+    counts_towards_norm = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.label
 
 # Урок в шаблоне недели — используется для построения расписания
 class TemplateLesson(models.Model):
@@ -95,11 +103,10 @@ class TemplateLesson(models.Model):
     day_of_week = models.IntegerField(choices=DAY_CHOICES)
     start_time = models.TimeField()
     duration_minutes = models.PositiveIntegerField(default=45)
-    type = models.CharField(
-        max_length=10,
-        choices=[('lesson', 'Урок'), ('course', 'Курс')],
-        default='lesson',
-        help_text="Тип занятия: lesson — с учителем, course — самостоятельное"
+    type = models.ForeignKey(
+        "LessonType",
+        on_delete=models.PROTECT,
+        related_name='lessons'
     )
 
     class Meta:
@@ -256,9 +263,10 @@ class KTPEntry(models.Model):
 
 class TemplateWeekDraft(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    base_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE)
+    base_week = models.ForeignKey(TemplateWeek, on_delete=models.CASCADE, null=True, blank=True)
     data = models.JSONField()
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Draft by {self.user} for {self.base_week.name}"
+

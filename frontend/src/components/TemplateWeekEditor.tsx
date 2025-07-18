@@ -1,9 +1,19 @@
 // TemplateWeekEditor.tsx - редактор черновика
+// 🔹 Создаёт или клонирует черновик шаблонной недели (через POST)
+//
+// 🔹 Хранит draftId локально в состоянии
+//
+// 🔹 Отображает WeekViewByGrade, WeekViewSwitcher, FullCalendar, но не загружает lessons централизованно, как это делает ActiveTemplateWeekView
+//
+// ⚠️ Сейчас не полностью синхронизирован с новой архитектурой, где lessons должны быть подготовлены заранее и переданы в Switcher
+//
+// 🔜 Нужно внедрить такой же preparedLessons, как в ActiveTemplateWeekView
+
+
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, message } from 'antd';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import TemplateWeekCalendar from './TemplateWeekCalendar';
 import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewSwitcher from './WeekViewSwitcher';
 
@@ -77,6 +87,10 @@ const TemplateWeekEditor: React.FC = () => {
   const handlePublish = async () => {
     if (!draftId) {
       message.error("Нет активного черновика.");
+      return;
+    }
+    if (!draftId) {
+      console.warn("draftId не передан");
       return;
     }
 
