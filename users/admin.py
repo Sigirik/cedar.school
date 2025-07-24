@@ -4,10 +4,16 @@ from .models import User, UserSubject, UserGrade
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    fieldsets = UserAdmin.fieldsets + (
+    # Переопределяем fieldsets с включением middle_name
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        ("Personal info", {"fields": ("last_name", "first_name", "middle_name", "email")}),
+        ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
+        ("Important dates", {"fields": ("last_login", "date_joined")}),
         ("Роль", {"fields": ("role",)}),
     )
-    list_display = ("username", "email", "first_name", "last_name", "role")
+
+    list_display = ("username", "email", "last_name", "first_name", "middle_name", "role")
     list_filter = ("role",)
 
 

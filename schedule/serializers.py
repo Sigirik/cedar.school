@@ -33,6 +33,11 @@ class TemplateLessonSerializer(serializers.ModelSerializer):
         model = TemplateLesson
         fields = ["id", "subject", "grade", "teacher", "day_of_week", "start_time", "duration_minutes", "type"]
 
+class TemplateLessonCompactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TemplateLesson
+        fields = ["subject", "grade", "teacher", "day_of_week", "start_time", "duration_minutes", "type"]
+
 class TemplateWeekDetailSerializer(serializers.ModelSerializer):
     lessons = serializers.SerializerMethodField()
 
@@ -41,7 +46,9 @@ class TemplateWeekDetailSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "academic_year", "created_at", "is_active", "lessons"]
 
     def get_lessons(self, obj):
-        lessons = TemplateLesson.objects.filter(template_week=obj)
+        lessons = TemplateLesson.objects.filter(template_week=obj).select_related("subject", "grade", "teacher").only(
+            "id", "subject", "grade", "teacher", "day_of_week", "start_time", "duration_minutes", "type"
+        )
         return TemplateLessonSerializer(lessons, many=True).data
 
 class TemplateWeekSerializer(serializers.ModelSerializer):
@@ -69,7 +76,7 @@ class GradeSerializer(serializers.ModelSerializer):
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name"]
+        fields = ["id", "username", "first_name", "middle_name", "last_name", "role"]
 
 class WeeklyNormSerializer(serializers.ModelSerializer):
     grade_name = serializers.CharField(source="grade.name", read_only=True)
@@ -91,4 +98,7 @@ class TeacherAvailabilitySerializer(serializers.ModelSerializer):
         model = TeacherAvailability
         fields = ['id', 'teacher', 'day_of_week', 'start_time', 'end_time']
 
-
+class TeacherAvailabilityCompactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherAvailability
+        fields = ['teacher', 'day_of_week', 'start_time', 'end_time']

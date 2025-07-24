@@ -14,6 +14,7 @@ class User(AbstractUser):
         STUDENT = "STUDENT", "Ученик"
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
+    middle_name = models.CharField("Отчество", max_length=150, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.role})"

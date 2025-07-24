@@ -7,7 +7,12 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from .models import TemplateWeekDraft, TemplateWeek, TemplateLesson
-from .serializers import TemplateWeekDraftSerializer, TemplateWeekDetailSerializer, TemplateLessonSerializer
+from .serializers import (
+    TemplateWeekDraftSerializer,
+    TemplateWeekDetailSerializer,
+    TemplateLessonSerializer,
+    TemplateLessonCompactSerializer  # 🔧 компактный сериализатор
+)
 from schedule.validators.schedule_rules import validate_schedule
 from schedule.serializers import WeeklyNormSerializer
 from schedule.models import WeeklyNorm
@@ -26,30 +31,26 @@ class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def commit(self, request, pk=None):
         draft = self.get_object()
-        #Проверяем на пересечения
-        weekly_norms = WeeklyNormSerializer(WeeklyNorm.objects.all(), many=True).data
+
+        weekly_norms = WeeklyNorm.objects.all()
         errors, warnings = validate_schedule(
             draft.data.get("lessons", []),
-            weekly_norms,
+            WeeklyNormSerializer(weekly_norms, many=True).data,
             check_user_links=True
         )
 
         if errors:
             return Response({"errors": errors}, status=400)
-        # warnings можно вернуть во фронт, если нужно
 
-        # Деактивируем текущий шаблон
         TemplateWeek.objects.filter(is_active=True).update(is_active=False)
 
-        # Сохраняем новый как активный
         new_week = TemplateWeek.objects.create(
             name=f"Шаблонная неделя (версия от {timezone.now().date()})",
-            academic_year=draft.base_week.academic_year,
+            academic_year=draft.base_week.academic_year if draft.base_week else None,
             is_active=True,
             created_at=timezone.now(),
         )
 
-        # Применяем уроки
         lessons = draft.data.get("lessons", [])
         for item in lessons:
             TemplateLesson.objects.create(
@@ -70,11 +71,23 @@ class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
 @api_view(["POST"])
 def create_draft_from_template(request, template_id):
     template = get_object_or_404(TemplateWeek, id=template_id)
+
+    lessons = TemplateLesson.objects.filter(template_week=template).select_related(
+        'subject', 'grade', 'teacher', 'type'
+    ).only(
+        'id', 'day_of_week', 'start_time', 'duration_minutes',
+        'subject__name', 'grade__name', 'teacher__first_name', 'teacher__last_name',
+        'type__key', 'type__label'
+    )
+
+    serialized_lessons = TemplateLessonCompactSerializer(lessons, many=True).data
+
     draft = TemplateWeekDraft.objects.create(
         base_week=template,
         user=request.user,
-        data={"lessons": TemplateLessonSerializer(template.lessons.all(), many=True).data}
+        data={"lessons": serialized_lessons}
     )
+
     return Response(TemplateWeekDraftSerializer(draft).data, status=201)
 
 

@@ -3,9 +3,12 @@
 // Формирует preparedLessons с названиями, статусами (ok, under, over) и передаёт их в WeekViewSwitcher
 // Используется только для просмотра, без редактирования
 
+// ActiveTemplateWeekView.tsx
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import WeekViewSwitcher from './WeekViewSwitcher';
+import { prepareLessons } from './utils/prepareLessons';
 
 const ActiveTemplateWeekView: React.FC = () => {
   const [preparedLessons, setPreparedLessons] = useState<any[]>([]);
@@ -32,11 +35,7 @@ const ActiveTemplateWeekView: React.FC = () => {
         const subjects = subjectsRes.data;
         const grades = gradesRes.data;
         const norms = normsRes.data;
-        const teachers = teachersRes.data.map((t: any) => ({
-          ...t,
-          full_name: `${t.last_name} ${t.first_name}`,
-        }));
-
+        const teachers = teachersRes.data;
         const availability = availabilityRes.data || [];
 
         setSubjects(subjects);
@@ -45,38 +44,10 @@ const ActiveTemplateWeekView: React.FC = () => {
         setWeeklyNorms(norms);
         setAvailability(availability);
 
-        const getName = (id: number, list: any[], field = 'name') => list.find(i => i.id === id)?.[field] || `ID ${id}`;
-
-        const countMap: Record<string, number> = {};
-        lessons.forEach(l => {
-          const key = `${l.grade}-${l.subject}-${l.type}`;
-          countMap[key] = (countMap[key] || 0) + 1;
-        });
-
-        const prepared = lessons.map(l => {
-          const norm = norms.find(n => n.grade === l.grade && n.subject === l.subject);
-          const count = countMap[`${l.grade}-${l.subject}-${l.type || 'lesson'}`] || 0;
-          let status = '';
-          if (norm) {
-            const target = (l.type === 'course') ? norm.courses_per_week : norm.lessons_per_week;
-            if (count > target) status = 'over';
-            else if (count < target) status = 'under';
-            else status = 'ok';
-          }
-
-          return {
-            ...l,
-            start_time: l.start_time.slice(0, 5),
-            subject_name: getName(l.subject, subjects),
-            grade_name: getName(l.grade, grades),
-            teacher_name: getName(l.teacher, teachers, 'full_name'),
-            status
-          };
-        });
-
+        const prepared = prepareLessons(lessons, subjects, grades, teachers, norms);
         setPreparedLessons(prepared);
       } catch (e) {
-        console.warn("\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438 \u0434\u0430\u043d\u043d\u044b\u0445:", e);
+        console.warn("Ошибка загрузки данных:", e);
       } finally {
         setLoading(false);
       }

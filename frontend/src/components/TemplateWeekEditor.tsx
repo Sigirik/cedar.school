@@ -10,93 +10,77 @@
 // 🔜 Нужно внедрить такой же preparedLessons, как в ActiveTemplateWeekView
 
 
+// TemplateWeekEditor.tsx - редактор черновика
+
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, message } from 'antd';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewSwitcher from './WeekViewSwitcher';
-
-interface TemplateWeek {
-  id: number;
-  name: string;
-  school_year: string;
-  created_at: string;
-}
+import { prepareLessons } from './utils/prepareLessons';
 
 const TemplateWeekEditor: React.FC = () => {
-  const [historicalTemplates, setHistoricalTemplates] = useState<TemplateWeek[]>([]);
+  const [historicalTemplates, setHistoricalTemplates] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draftId, setDraftId] = useState<number | null>(null);
+
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [weeklyNorms, setWeeklyNorms] = useState<any[]>([]);
+  const [availability, setAvailability] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
 
-  // 🔄 При монтировании — создать пустой черновик
   useEffect(() => {
-    const createInitialDraft = async () => {
+    const createAndLoadDraft = async () => {
       try {
-        const res = await axios.post('/api/draft/template-drafts/create-empty/');
-        setDraftId(res.data.id);
-        console.log("✅ Пустой черновик создан:", res.data);
-      } catch (err) {
-        message.error("Ошибка при создании черновика.");
-        console.error(err);
+        const draftRes = await axios.post('/api/draft/template-drafts/create-from/active/');
+        const id = draftRes.data.id;
+        setDraftId(id);
+
+        const [draftWeek, subjectsRes, gradesRes, teachersRes, normsRes, availabilityRes] = await Promise.all([
+          axios.get(`/api/draft/template-drafts/${id}/`),
+          axios.get('/api/ktp/subjects/'),
+          axios.get('/api/ktp/grades/'),
+          axios.get('/api/ktp/teachers/'),
+          axios.get('/api/ktp/weekly-norms/'),
+          axios.get('/api/template/teacher-availability/')
+        ]);
+
+        const rawLessons = draftWeek.data.data.lessons || [];
+        const subjects = subjectsRes.data;
+        const grades = gradesRes.data;
+        const teachers = teachersRes.data;
+        const norms = normsRes.data;
+        const availability = availabilityRes.data || [];
+
+        setSubjects(subjects);
+        setGrades(grades);
+        setTeachers(teachers);
+        setWeeklyNorms(norms);
+        setAvailability(availability);
+
+        const prepared = prepareLessons(rawLessons, subjects, grades, teachers, norms);
+        setLessons(prepared);
+      } catch (error) {
+        message.error("Ошибка при загрузке черновика.");
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
     };
-    createInitialDraft();
+    createAndLoadDraft();
   }, []);
 
-  const fetchHistoricalTemplates = async () => {
-    try {
-      const response = await axios.get('/api/template-week/historical_templates/');
-      setHistoricalTemplates(response.data);
-    } catch (error) {
-      message.error('Не удалось загрузить шаблоны.');
-    }
-  };
-
-  const handleImportClick = () => {
-    fetchHistoricalTemplates();
-    setIsModalVisible(true);
-  };
-
-  const handleClone = async () => {
-    if (!selectedTemplateId) return;
-
-    const confirmReplace = window.confirm('Черновик будет перезаписан. Продолжить?');
-    if (!confirmReplace) return;
-
-    setIsLoading(true);
-    try {
-      const res = await axios.post(`/api/draft/template-drafts/create-from/${selectedTemplateId}/`);
-      message.success('Черновик обновлён из шаблона.');
-      setDraftId(res.data.id);
-      setIsModalVisible(false);
-    } catch (error: any) {
-      if (error.response?.status === 409) {
-        message.warning('Уже существует черновик.');
-      } else {
-        message.error('Ошибка при копировании.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handlePublish = async () => {
-    if (!draftId) {
-      message.error("Нет активного черновика.");
-      return;
-    }
-    if (!draftId) {
-      console.warn("draftId не передан");
-      return;
-    }
-
+    if (!draftId) return;
     const confirm = window.confirm("Опубликовать этот черновик как новую активную неделю?");
     if (!confirm) return;
-
     try {
       await axios.post(`/api/draft/template-drafts/${draftId}/commit/`);
       message.success("Черновик опубликован.");
@@ -112,19 +96,28 @@ const TemplateWeekEditor: React.FC = () => {
       <h2 className="text-xl font-semibold mb-4">Редактирование шаблонной недели (черновик)</h2>
 
       <div className="mb-4 space-x-2">
-        <Button onClick={handleImportClick}>Импортировать из другого шаблона</Button>
-        <Button type="primary" disabled={!draftId} onClick={handlePublish}>
-          Опубликовать
-        </Button>
+        <Button onClick={() => setIsModalVisible(true)}>Импортировать из другого шаблона</Button>
+        <Button type="primary" disabled={!draftId} onClick={handlePublish}>Опубликовать</Button>
       </div>
-      {draftId && <TemplateWeekCalendar draftId={draftId} />}
-      {draftId && <WeekViewByGrade draftId={draftId} />}
-      {draftId && <WeekViewSwitcher draftId={draftId} />}
+
+      {loading ? (
+        <p className="text-gray-400">Загрузка…</p>
+      ) : (
+        <WeekViewSwitcher
+          source="draft"
+          lessons={lessons}
+          subjects={subjects}
+          grades={grades}
+          teachers={teachers}
+          weeklyNorms={weeklyNorms}
+          teacherAvailability={availability}
+        />
+      )}
 
       <Modal
         title="Выбор шаблона для импорта"
         open={isModalVisible}
-        onOk={handleClone}
+        onOk={() => {}} // TODO: implement clone
         onCancel={() => setIsModalVisible(false)}
         confirmLoading={isLoading}
         okText="Импортировать"

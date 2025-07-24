@@ -1,11 +1,11 @@
 // Переключает режимы: по классам 🏫, по учителям 👩‍🏫, по нормам 📊
 // Использует lessons, weeklyNorms, переданные из ActiveTemplateWeekView.tsx
-// Компоненты WeekViewByGrade, WeekViewByTeacher, WeekNormSummary теперь чисто отображающие
+// Компоненты WeekViewByGrade, WeekViewByTeacher, WeekNormSummary, WeekLessonSummaryTable теперь чисто отображающие
 import React, { useState } from 'react';
 import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewByTeacher from './WeekViewByTeacher';
 import WeekNormSummary from './WeekNormSummary';
-// import FullCalendarEditor from './FullCalendarEditor'; // 🔸 пока не нужен
+import WeekLessonSummaryTable from './WeekLessonSummaryTable';
 
 interface Lesson {
   subject: number;
@@ -61,26 +61,24 @@ const WeekViewSwitcher: React.FC<{
           👩‍🏫 По учителям
         </button>
         <button
+          className={`px-3 py-1 rounded ${mode === 'summary' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setMode('summary')}
+        >
+          🧮 Сводная таблица
+        </button>
+        <button
           className={`px-3 py-1 rounded ${mode === 'norm' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           onClick={() => setMode('norm')}
         >
           📊 По нормам
         </button>
-        {/*
-        🔧 Позже можно вернуть:
-        <button
-          className={`px-3 py-1 rounded ${mode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-          onClick={() => setMode('calendar')}
-        >
-          📅 Сводная неделя
-        </button>
-        */}
+
       </div>
 
       {mode === 'grade' && <WeekViewByGrade lessons={lessons} />}
       {mode === 'teacher' && <WeekViewByTeacher lessons={lessons} teacherAvailability={teacherAvailability} />}
       {mode === 'norm' && <WeekNormSummary lessons={lessons} weeklyNorms={weeklyNorms} />}
-      {/* {mode === 'calendar' && <FullCalendarEditor lessons={lessons} />} */}
+      {mode === 'summary' && <WeekLessonSummaryTable lessons={lessons} subjects={subjects} grades={grades} teachers={teachers} />}
     </div>
   );
 };

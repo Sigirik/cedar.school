@@ -8,20 +8,53 @@ from datetime import datetime
 from schedule.models import TeacherAvailability
 
 from .models import TemplateWeek, TemplateLesson
-from .serializers import TemplateWeekSerializer, TemplateWeekDetailSerializer, TeacherAvailabilitySerializer
-
+from .serializers import (
+    TemplateWeekSerializer,
+    TemplateWeekDetailSerializer,
+    TeacherAvailabilityCompactSerializer  # 🔄 заменён сериализатор
+)
 
 class ActiveTemplateWeekView(APIView):
     def get(self, request):
         active_week = TemplateWeek.objects.filter(is_active=True).order_by("-created_at").first()
         if not active_week:
             return Response({"detail": "No active template week found."}, status=404)
+
+        # 🔽 оптимизация: предварительная загрузка связей
+        lessons = TemplateLesson.objects.filter(template_week=active_week).select_related(
+            'subject', 'grade', 'teacher', 'type'
+        ).only(
+            'id', 'day_of_week', 'start_time', 'duration_minutes',
+            'subject__name', 'grade__name', 'teacher__first_name', 'teacher__last_name',
+            'type__key', 'type__label'
+        )
+
+        # сериализация вручную с вложением lessons
         data = TemplateWeekDetailSerializer(active_week).data
+        data['lessons'] = [
+            {
+                'id': l.id,
+                'day_of_week': l.day_of_week,
+                'start_time': l.start_time,
+                'duration_minutes': l.duration_minutes,
+                'subject': l.subject_id,
+                'subject_name': l.subject.name,
+                'grade': l.grade_id,
+                'grade_name': l.grade.name,
+                'teacher': l.teacher_id,
+                'teacher_name': f"{l.teacher.last_name} {l.teacher.first_name}",
+                'type': l.type.key,
+                'type_label': l.type.label
+            }
+            for l in lessons
+        ]
+
         return Response(data)
+
 
 class TeacherAvailabilityViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = TeacherAvailability.objects.select_related('teacher').all()
-    serializer_class = TeacherAvailabilitySerializer
+    serializer_class = TeacherAvailabilityCompactSerializer  # 🔄 оптимизированный сериализатор
 
 
 class TemplateWeekViewSet(viewsets.ModelViewSet):
