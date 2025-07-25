@@ -1,23 +1,11 @@
 // TemplateWeekEditor.tsx - редактор черновика
-// 🔹 Создаёт или клонирует черновик шаблонной недели (через POST)
-//
-// 🔹 Хранит draftId локально в состоянии
-//
-// 🔹 Отображает WeekViewByGrade, WeekViewSwitcher, FullCalendar, но не загружает lessons централизованно, как это делает ActiveTemplateWeekView
-//
-// ⚠️ Сейчас не полностью синхронизирован с новой архитектурой, где lessons должны быть подготовлены заранее и переданы в Switcher
-//
-// 🔜 Нужно внедрить такой же preparedLessons, как в ActiveTemplateWeekView
-
-
-// TemplateWeekEditor.tsx - редактор черновика
 
 import React, { useEffect, useState } from 'react';
 import { Button, Modal, Select, message } from 'antd';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import WeekViewSwitcher from './WeekViewSwitcher';
-import { prepareLessons } from './utils/prepareLessons';
+import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
+import { prepareLessons } from '../utils/prepareLessons';
 
 const TemplateWeekEditor: React.FC = () => {
   const [historicalTemplates, setHistoricalTemplates] = useState([]);
@@ -37,9 +25,40 @@ const TemplateWeekEditor: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const createAndLoadDraft = async () => {
+    const init = async () => {
       try {
-        const draftRes = await axios.post('/api/draft/template-drafts/create-from/active/');
+        let draftRes;
+
+        const csrftoken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrftoken='))
+          ?.split('=')[1];
+
+        // 1. Пытаемся найти уже существующий черновик
+        const existingDrafts = await axios.get('/api/draft/template-drafts/', {
+          headers: { 'X-CSRFToken': csrftoken },
+          withCredentials: true,
+        });
+
+        if (existingDrafts.data.length > 0) {
+          draftRes = { data: existingDrafts.data[0] };
+          console.log('🟢 Найден существующий черновик', draftRes.data);
+        } else {
+          // 2. Если не найден — создаём
+          const active = await axios.get('/api/template/template-week/active/');
+          const activeId = active.data.id;
+
+          draftRes = await axios.post(
+            `/api/draft/template-drafts/create-from/${activeId}/`,
+            {},
+            {
+              headers: { 'X-CSRFToken': csrftoken },
+              withCredentials: true,
+            }
+          );
+          console.log('🟡 Создан черновик на основе активной недели', draftRes.data);
+        }
+
         const id = draftRes.data.id;
         setDraftId(id);
 
@@ -49,7 +68,7 @@ const TemplateWeekEditor: React.FC = () => {
           axios.get('/api/ktp/grades/'),
           axios.get('/api/ktp/teachers/'),
           axios.get('/api/ktp/weekly-norms/'),
-          axios.get('/api/template/teacher-availability/')
+          axios.get('/api/template/teacher-availability/'),
         ]);
 
         const rawLessons = draftWeek.data.data.lessons || [];
@@ -67,26 +86,77 @@ const TemplateWeekEditor: React.FC = () => {
 
         const prepared = prepareLessons(rawLessons, subjects, grades, teachers, norms);
         setLessons(prepared);
-      } catch (error) {
-        message.error("Ошибка при загрузке черновика.");
-        console.error(error);
+      } catch (e) {
+        message.error('Ошибка при загрузке черновика.');
+        console.error(e);
       } finally {
         setLoading(false);
       }
     };
-    createAndLoadDraft();
+    init();
   }, []);
+
+    // 🔄 Обновление урока в state + PATCH на бэкенд
+    const patchDraft = async (updatedLessonsRaw: any[]) => {
+      if (!draftId) return;
+      const csrftoken = document.cookie
+        .split('; ')
+        .find(r => r.startsWith('csrftoken='))?.split('=')[1];
+      await axios.patch(
+        `/api/draft/template-drafts/${draftId}/`,
+        { data: { lessons: updatedLessonsRaw } },
+        { headers: { 'X-CSRFToken': csrftoken }, withCredentials: true }
+      );
+    };
+
+    const handleLessonSave = async (updated: any) => {
+      const raw = lessons.map(l => (l.id === updated.id ? updated : l));
+          // 💡 При желании — запрос к /api/schedule/validate/ и блокировка по ошибкам.
+      setLessons(raw);
+      try {
+        await patchDraft(raw);
+        message.success('Урок сохранён');
+      } catch {
+        message.error('Не удалось сохранить черновик');
+      }
+    };
+
+    const handleLessonDelete = async (id: number) => {
+      const raw = lessons.filter(l => l.id !== id);
+      setLessons(raw);
+      try {
+        await patchDraft(raw);
+        message.success('Урок удалён');
+      } catch {
+        message.error('Не удалось сохранить черновик');
+      }
+    };
+
 
   const handlePublish = async () => {
     if (!draftId) return;
-    const confirm = window.confirm("Опубликовать этот черновик как новую активную неделю?");
+    const confirm = window.confirm('Опубликовать этот черновик как новую активную неделю?');
     if (!confirm) return;
     try {
-      await axios.post(`/api/draft/template-drafts/${draftId}/commit/`);
-      message.success("Черновик опубликован.");
-      navigate("/template-week/active");
+      const csrftoken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+
+      await axios.post(
+        `/api/draft/template-drafts/${draftId}/commit/`,
+        {},
+        {
+          headers: {
+            'X-CSRFToken': csrftoken,
+          },
+          withCredentials: true,
+        }
+      );
+      message.success('Черновик опубликован.');
+      navigate('/template-week/active');
     } catch (err) {
-      message.error("Ошибка при публикации.");
+      message.error('Ошибка при публикации.');
       console.error(err);
     }
   };
@@ -111,6 +181,8 @@ const TemplateWeekEditor: React.FC = () => {
           teachers={teachers}
           weeklyNorms={weeklyNorms}
           teacherAvailability={availability}
+          onLessonSave={handleLessonSave}
+          onLessonDelete={handleLessonDelete}
         />
       )}
 

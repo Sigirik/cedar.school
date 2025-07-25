@@ -64,8 +64,10 @@ const FullCalendarTemplateView: React.FC<{
       headerToolbar={false}
       eventDrop={onEventDrop}
       eventResize={onEventResize}
-      eventClick={onEventClick}
-      eventBorderRadius={12}
+      eventDidMount={(info) => {
+      // 12 px — можете изменить на любой
+       (info.el as HTMLElement).style.borderRadius = '12px';
+      }}
       eventContent={(arg) => {
         const lines = arg.event.title.split('\n');
         const time = arg.event.start?.toLocaleTimeString('ru-RU', {

@@ -1,5 +1,5 @@
 import React from "react";
-import TemplateWeekEditor from "./components/TemplateWeekEditor";
+import TemplateWeekEditor from "./components/template/TemplateWeekEditor";
 
 function App() {
   return (

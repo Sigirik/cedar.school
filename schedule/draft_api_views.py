@@ -5,17 +5,20 @@ from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 
 from .models import TemplateWeekDraft, TemplateWeek, TemplateLesson
 from .serializers import (
     TemplateWeekDraftSerializer,
     TemplateWeekDetailSerializer,
     TemplateLessonSerializer,
-    TemplateLessonCompactSerializer  # 🔧 компактный сериализатор
+    TemplateLessonCompactSerializer
 )
 from schedule.validators.schedule_rules import validate_schedule
 from schedule.serializers import WeeklyNormSerializer
 from schedule.models import WeeklyNorm
+
+User = get_user_model()
 
 class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
     queryset = TemplateWeekDraft.objects.all()
@@ -71,20 +74,16 @@ class TemplateWeekDraftViewSet(viewsets.ModelViewSet):
 @api_view(["POST"])
 def create_draft_from_template(request, template_id):
     template = get_object_or_404(TemplateWeek, id=template_id)
+    lessons = TemplateLesson.objects.filter(template_week=template)
+    serialized_lessons = TemplateLessonSerializer(lessons, many=True).data
+    print("🧪 Пользователь:", request.user)
+    print("✅ Аутентифицирован:", request.user.is_authenticated)
 
-    lessons = TemplateLesson.objects.filter(template_week=template).select_related(
-        'subject', 'grade', 'teacher', 'type'
-    ).only(
-        'id', 'day_of_week', 'start_time', 'duration_minutes',
-        'subject__name', 'grade__name', 'teacher__first_name', 'teacher__last_name',
-        'type__key', 'type__label'
-    )
-
-    serialized_lessons = TemplateLessonCompactSerializer(lessons, many=True).data
-
+    superuser = User.objects.filter(is_superuser=True).first()
+    TemplateWeekDraft.objects.all().delete()  # Удаляем все предыдущие черновики
     draft = TemplateWeekDraft.objects.create(
         base_week=template,
-        user=request.user,
+        user=superuser,
         data={"lessons": serialized_lessons}
     )
 
@@ -93,9 +92,11 @@ def create_draft_from_template(request, template_id):
 
 @api_view(["POST"])
 def create_empty_draft(request):
+    superuser = User.objects.filter(is_superuser=True).first()
+    TemplateWeekDraft.objects.all().delete()  # Удаляем все предыдущие черновики
     draft = TemplateWeekDraft.objects.create(
         base_week=None,
-        user=request.user,
+        user=superuser,
         data={"lessons": []}
     )
     return Response(TemplateWeekDraftSerializer(draft).data, status=201)

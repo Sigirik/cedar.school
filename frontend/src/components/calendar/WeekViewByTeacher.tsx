@@ -55,7 +55,6 @@ const WeekViewByTeacher: React.FC<{
   if (!lessons || lessons.length === 0) return <p className="text-gray-500">Нет уроков</p>;
 
   const teacherIds = [...new Set(lessons.map(l => l.teacher))];
-  console.log("👀 Всего teacherAvailability:", teacherAvailability);
 
   return (
     <div className="p-4">
@@ -113,7 +112,6 @@ const WeekViewByTeacher: React.FC<{
               backgroundColor: '#dbeafe'
             };
 
-            console.log('🟦 Фоновая доступность:', entry);
             return entry;
           });
 
@@ -125,7 +123,6 @@ const WeekViewByTeacher: React.FC<{
               backgroundColor: '#93c5fd'  // голубой
             };
 
-            console.log('🧪 Тестовый фон:', testBackground);
 
             const events = [...lessonEvents, ...availabilityEvents];;
 

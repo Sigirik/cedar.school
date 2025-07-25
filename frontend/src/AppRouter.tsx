@@ -1,8 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import ActiveTemplateWeekView from './components/ActiveTemplateWeekView';
-import TemplateWeekEditor from './components/TemplateWeekEditor';
-import LiveLessonDemo from './features/liveboard/LiveLessonDemo'; // путь подкорректируй под структуру
+import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
+import TemplateWeekEditor from './components/template/TemplateWeekEditor';
+import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
+
 
 
 const AppRouter: React.FC = () => {
@@ -12,7 +13,7 @@ const AppRouter: React.FC = () => {
         <Route path="/" element={<Navigate to="/template-week" />} />
         <Route path="/template-week" element={<ActiveTemplateWeekView />} />
         <Route path="/live-demo" element={<LiveLessonDemo />} />
-        <Route path="/template-week/draft/edit/:draftId" element={<TemplateWeekEditor />} />
+        <Route path="/template-week/draft/edit" element={<TemplateWeekEditor />} />
       </Routes>
     </Router>
   );

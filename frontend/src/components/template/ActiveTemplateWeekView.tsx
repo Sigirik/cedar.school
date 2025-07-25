@@ -7,8 +7,8 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import WeekViewSwitcher from './WeekViewSwitcher';
-import { prepareLessons } from './utils/prepareLessons';
+import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
+import { prepareLessons } from '../utils/prepareLessons';
 
 const ActiveTemplateWeekView: React.FC = () => {
   const [preparedLessons, setPreparedLessons] = useState<any[]>([]);

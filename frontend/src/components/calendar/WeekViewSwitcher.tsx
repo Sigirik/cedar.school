@@ -35,14 +35,12 @@ interface WeeklyNorm {
   courses_per_week: number;
 }
 
-const WeekViewSwitcher: React.FC<{
-  lessons: Lesson[];
-  subjects: ReferenceItem[];
-  grades: ReferenceItem[];
-  teachers: ReferenceItem[];
-  weeklyNorms: WeeklyNorm[];
-  teacherAvailability: any[];
-}> = ({ lessons, subjects, grades, teachers, weeklyNorms, teacherAvailability }) => {
+const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
+  lessons, subjects, grades, teachers,
+  weeklyNorms, teacherAvailability,
+  onLessonSave, onLessonDelete,
+  source = 'active'
+}) => {
   const [mode, setMode] = useState<'grade' | 'teacher' | 'norm'>('grade');
 
   return (
@@ -75,8 +73,30 @@ const WeekViewSwitcher: React.FC<{
 
       </div>
 
-      {mode === 'grade' && <WeekViewByGrade lessons={lessons} />}
-      {mode === 'teacher' && <WeekViewByTeacher lessons={lessons} teacherAvailability={teacherAvailability} />}
+      {mode === 'grade' && (
+        <WeekViewByGrade
+          lessons={lessons}
+          subjects={subjects}
+          grades={grades}
+          teachers={teachers}
+          teacherAvailability={teacherAvailability}
+          source={source}
+          onLessonSave={onLessonSave!}
+          onLessonDelete={onLessonDelete!}
+        />
+      )}
+      {mode === 'teacher' && (
+        <WeekViewByTeacher
+          lessons={lessons}
+          subjects={subjects}
+          grades={grades}
+          teachers={teachers}
+          teacherAvailability={teacherAvailability}
+          source={source}
+          onLessonSave={onLessonSave!}
+          onLessonDelete={onLessonDelete!}
+        />
+      )}
       {mode === 'norm' && <WeekNormSummary lessons={lessons} weeklyNorms={weeklyNorms} />}
       {mode === 'summary' && <WeekLessonSummaryTable lessons={lessons} subjects={subjects} grades={grades} teachers={teachers} />}
     </div>
