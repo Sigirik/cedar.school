@@ -1,8 +1,8 @@
 /**
  * WeekViewByGrade — календарь по классам.
- *  • В режиме draft открывает LessonEditorModal по клику,
- *    в режиме active — только просмотр.
- *  • Не хранит собственную копию уроков, использует prop `lessons`.
+ *  • В draft‑режиме открывает LessonEditorModal и
+ *    сохраняет drag‑n‑drop / resize через onLessonSave.
+ *  • В active‑режиме только просмотр.
  */
 
 import React, { useState } from 'react';
@@ -14,7 +14,7 @@ interface Lesson {
   subject: number;
   grade: number;
   teacher: number;
-  day_of_week: number;          // 0–4  (Пн–Пт)
+  day_of_week: number;          // 0 = Пн … 4 = Пт
   start_time: string;           // 'HH:mm'
   duration_minutes: number;
   type?: string;
@@ -26,20 +26,6 @@ interface Lesson {
 
 interface Lookup { id: number; name: string; }
 
-const weekdayMap = [
-  '2025-07-07', // Пн
-  '2025-07-08', // Вт
-  '2025-07-09', // Ср
-  '2025-07-10', // Чт
-  '2025-07-11', // Пт
-];
-
-const statusColor: Record<string, string> = {
-  over:  '#fecaca',
-  under: '#fef08a',
-  ok:    '#bbf7d0',
-};
-
 interface Props {
   lessons: Lesson[];
   source?: 'draft' | 'active';
@@ -50,6 +36,20 @@ interface Props {
   onLessonSave:   (l: Lesson) => void;
   onLessonDelete: (id: number) => void;
 }
+
+const weekdayMap = [
+  '2025-07-07', // Пн
+  '2025-07-08',
+  '2025-07-09',
+  '2025-07-10',
+  '2025-07-11', // Пт
+];
+
+const statusColor: Record<string, string> = {
+  over:  '#fecaca',
+  under: '#fef08a',
+  ok:    '#bbf7d0',
+};
 
 const WeekViewByGrade: React.FC<Props> = ({
   lessons,
@@ -64,11 +64,24 @@ const WeekViewByGrade: React.FC<Props> = ({
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  if (!lessons.length) {
-    return <p className="text-gray-500">Нет уроков</p>;
-  }
+  if (!lessons.length) return <p className="text-gray-500">Нет уроков</p>;
 
   const gradeIds = [...new Set(lessons.map(l => l.grade))];
+
+  /** Пересчитать объект урока после drag‑n‑drop / resize */
+  const rebuildLesson = (ev: any, src: Lesson): Lesson => {
+    const jsDate = ev.event.start as Date;             // новая дата‑время начала
+    const endJs  = ev.event.end   as Date;
+    const newDay = jsDate.getDay() === 1 ? 0 : jsDate.getDay() - 1; // 1=Mon→0, 5=Fri→4
+    const hh     = String(jsDate.getHours()).padStart(2, '0');
+    const mm     = String(jsDate.getMinutes()).padStart(2, '0');
+    return {
+      ...src,
+      day_of_week: newDay,
+      start_time: `${hh}:${mm}`,
+      duration_minutes: Math.round((endJs.getTime() - jsDate.getTime()) / 60000),
+    };
+  };
 
   return (
     <div className="p-4">
@@ -76,23 +89,22 @@ const WeekViewByGrade: React.FC<Props> = ({
 
       {gradeIds.map((gradeId) => {
         const gradeLessons = lessons.filter(l => l.grade === gradeId);
-        const gradeName = gradeLessons[0]?.grade_name || `Класс ${gradeId}`;
+        const gradeName    = gradeLessons[0]?.grade_name || `Класс ${gradeId}`;
 
-        const events = gradeLessons.map((l) => {
-          // превращаем «день + HH:mm» в ISO‑даты
-          const baseDate = weekdayMap[l.day_of_week];
-          const [hh, mm] = l.start_time.split(':').map(Number);
-          const startDate = new Date(`${baseDate}T00:00:00`);
-          startDate.setHours(hh, mm, 0, 0);
-          const endDate = new Date(startDate.getTime() + l.duration_minutes * 60000);
+        const events = gradeLessons.map(l => {
+          const base = weekdayMap[l.day_of_week];
+          const [h, m]  = l.start_time.split(':').map(Number);
+          const start   = new Date(`${base}T${l.start_time}:00`);
+          start.setHours(h, m, 0, 0);
+          const end     = new Date(start.getTime() + l.duration_minutes * 60000);
 
           const emoji = l.type === 'course' ? '📗' : '📘';
 
           return {
-            id:     String(l.id),
-            title:  `🏫 ${l.grade_name}\n${emoji} ${l.subject_name}\n👩‍🏫 ${l.teacher_name}`,
-            start:  startDate.toISOString(),
-            end:    endDate.toISOString(),
+            id:    String(l.id),
+            title: `🏫 ${l.grade_name}\n${emoji} ${l.subject_name}\n👩‍🏫 ${l.teacher_name}`,
+            start: start.toISOString(),
+            end:   end.toISOString(),
             backgroundColor: statusColor[l.status ?? 'ok'],
             textColor:  '#111827',
             borderColor: 'transparent',
@@ -108,17 +120,30 @@ const WeekViewByGrade: React.FC<Props> = ({
             <FullCalendarTemplateView
               events={events}
               editable={source === 'draft'}
+              /** ⬇️ клик по карточке */
               onEventClick={(info) => {
                 if (source !== 'draft') return;
-                const id = parseInt(info.event.id, 10);
-                const lesson = lessons.find(l => l.id === id);
-                if (lesson) {
-                  setSelected(lesson);
-                  setShowModal(true);
+                const id = Number(info.event.id);
+                const l  = lessons.find(x => x.id === id);
+                if (l) {
+                  setSelected(l);
+                  setShowModal(true);     // form уже «привязан» к DOM – warning исчез
                 }
               }}
-              onEventDrop={(arg) => console.log('📦 Drag‑drop', arg.event)}
-              onEventResize={(arg) => console.log('📏 Resize', arg.event)}
+              /** ⬇️ drag‑n‑drop */
+              onEventDrop={(info) => {
+                const id = Number(info.event.id);
+                const src = lessons.find(x => x.id === id);
+                if (!src) return;
+                onLessonSave(rebuildLesson(info, src));
+              }}
+              /** ⬇️ resize */
+              onEventResize={(info) => {
+                const id = Number(info.event.id);
+                const src = lessons.find(x => x.id === id);
+                if (!src) return;
+                onLessonSave(rebuildLesson(info, src));
+              }}
             />
           </div>
         );

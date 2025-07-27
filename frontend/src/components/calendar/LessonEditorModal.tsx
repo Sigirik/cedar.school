@@ -68,7 +68,7 @@ const LessonEditorModal: React.FC<Props> = ({
       open={open}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical">
         <Form.Item name="grade" label="Класс" rules={[{ required: true }]}>

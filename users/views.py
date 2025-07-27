@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from rest_framework import viewsets
 from .models import User
+from .serializers import UserSerializer
 
 @login_required
 def dashboard(request):
@@ -19,3 +21,7 @@ def dashboard(request):
         template = "users/dashboard_default.html"
 
     return render(request, template, {"user": user})
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all().prefetch_related('availabilities')
+    serializer_class = UserSerializer

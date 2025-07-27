@@ -1,10 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, UserSubject, UserGrade
+from .models import User
+from schedule.core.models import TeacherAvailability
+
+class TeacherAvailabilityInline(admin.TabularInline):
+    model = TeacherAvailability
+    extra = 0
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    # Переопределяем fieldsets с включением middle_name
+    # fieldsets и прочее как у тебя
     fieldsets = (
         (None, {"fields": ("username", "password")}),
         ("Personal info", {"fields": ("last_name", "first_name", "middle_name", "email")}),
@@ -16,6 +21,17 @@ class CustomUserAdmin(UserAdmin):
     list_display = ("username", "email", "last_name", "first_name", "middle_name", "role")
     list_filter = ("role",)
 
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj and obj.role == User.Role.STUDENT:
+            for i, (name, opts) in enumerate(fieldsets):
+                if name == "Personal info":
+                    opts['fields'] = opts['fields'] + ("individual_subjects_enabled",)
+                    break
+        return fieldsets
 
-admin.site.register(UserSubject)
-admin.site.register(UserGrade)
+    def get_inline_instances(self, request, obj=None):
+        inlines = super().get_inline_instances(request, obj)
+        if obj and obj.role == User.Role.TEACHER:
+            inlines.append(TeacherAvailabilityInline(self.model, self.admin_site))
+        return inlines

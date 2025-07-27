@@ -1,6 +1,6 @@
 #Проверки пересечений в расписании.
 from datetime import datetime, timedelta
-from users.models import UserSubject, UserGrade
+from schedule.core.models import TeacherSubject, TeacherGrade
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -70,14 +70,14 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
             is_superuser = getattr(teacher, "is_superuser", False)
 
             # Проверка предмета
-            if not UserSubject.objects.filter(teacher=teacher, subject_id=subject_id).exists():
+            if not TeacherSubject.objects.filter(teacher=teacher, subject_id=subject_id).exists():
                 if is_superuser or role in ["DIRECTOR", "HEAD_TEACHER"]:
                     warnings.append(f"⚠️ {teacher} не привязан к предмету ID={subject_id}")
                 else:
                     errors.append(f"⛔ {teacher} не привязан к предмету ID={subject_id}")
 
             # Проверка класса
-            if not UserGrade.objects.filter(teacher=teacher, grade_id=grade_id).exists():
+            if not TeacherGrade.objects.filter(teacher=teacher, grade_id=grade_id).exists():
                 if is_superuser or role in ["DIRECTOR", "HEAD_TEACHER"]:
                     warnings.append(f"⚠️ {teacher} не привязан к классу ID={grade_id}")
                 else:

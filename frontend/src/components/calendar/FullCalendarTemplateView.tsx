@@ -64,6 +64,7 @@ const FullCalendarTemplateView: React.FC<{
       headerToolbar={false}
       eventDrop={onEventDrop}
       eventResize={onEventResize}
+      eventClick={onEventClick}
       eventDidMount={(info) => {
       // 12 px — можете изменить на любой
        (info.el as HTMLElement).style.borderRadius = '12px';
