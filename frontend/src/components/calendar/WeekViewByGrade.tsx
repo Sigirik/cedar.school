@@ -6,8 +6,10 @@
  */
 
 import React, { useState } from 'react';
+import { message } from 'antd';
 import FullCalendarTemplateView from './FullCalendarTemplateView';
 import LessonEditorModal from './LessonEditorModal';
+import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
 
 interface Lesson {
   id: number;
@@ -33,6 +35,7 @@ interface Props {
   grades: Lookup[];
   teachers: Lookup[];
   teacherAvailability: any[];
+  onLessonModalProps?: any;
   onLessonSave:   (l: Lesson) => void;
   onLessonDelete: (id: number) => void;
 }
@@ -51,6 +54,22 @@ const statusColor: Record<string, string> = {
   ok:    '#bbf7d0',
 };
 
+const toPlainLesson = (l: any): PlainLesson => ({
+  id: l.id,
+  grade: l.grade,
+  teacher: l.teacher,
+  day_of_week: l.day_of_week,
+  start_time: l.start_time,
+  duration_minutes: l.duration_minutes,
+  // можно добавить type если требуется
+});
+const toTeacherSlot = (a: any): TeacherSlot => ({
+  teacher: a.teacher,
+  day_of_week: a.day_of_week,
+  start_time: a.start_time ?? a.start,  // поддержка разных полей
+  end_time: a.end_time ?? a.end,
+});
+
 const WeekViewByGrade: React.FC<Props> = ({
   lessons,
   source = 'active',
@@ -58,6 +77,7 @@ const WeekViewByGrade: React.FC<Props> = ({
   grades,
   teachers,
   teacherAvailability,
+  onLessonModalProps = {},
   onLessonSave,
   onLessonDelete,
 }) => {
@@ -67,6 +87,9 @@ const WeekViewByGrade: React.FC<Props> = ({
   if (!lessons.length) return <p className="text-gray-500">Нет уроков</p>;
 
   const gradeIds = [...new Set(lessons.map(l => l.grade))];
+
+  const checkLessons: PlainLesson[] = lessons.map(toPlainLesson);
+  const checkAvailability: TeacherSlot[] = teacherAvailability.map(toTeacherSlot);
 
   /** Пересчитать объект урока после drag‑n‑drop / resize */
   const rebuildLesson = (ev: any, src: Lesson): Lesson => {
@@ -135,14 +158,50 @@ const WeekViewByGrade: React.FC<Props> = ({
                 const id = Number(info.event.id);
                 const src = lessons.find(x => x.id === id);
                 if (!src) return;
-                onLessonSave(rebuildLesson(info, src));
+                const updated = rebuildLesson(info, src);
+
+                  // Проверки!
+                    const { errors, warnings } = validateLesson(
+                        toPlainLesson(updated),
+                        checkLessons,
+                        checkAvailability
+                    );
+                  if (errors.length) {
+                    message.error(errors.join('\n'));
+                    // ОТМЕНИТЬ drag-n-drop — вернём событие на старое место:
+                    info.revert();
+                    return;
+                  }
+                  if (warnings.length) {
+                    message.warning(warnings.join('\n'));
+                    // Всё равно разрешаем drop!
+                  }
+                onLessonSave(updated);
               }}
               /** ⬇️ resize */
               onEventResize={(info) => {
                 const id = Number(info.event.id);
                 const src = lessons.find(x => x.id === id);
                 if (!src) return;
-                onLessonSave(rebuildLesson(info, src));
+                const updated = rebuildLesson(info, src);
+
+                  // Проверки!
+                  const { errors, warnings } = validateLesson(
+                        toPlainLesson(updated),
+                        checkLessons,
+                        checkAvailability
+                  );
+                  if (errors.length) {
+                    message.error(errors.join('\n'));
+                    info.revert();
+                    return;
+                  }
+                  if (warnings.length) {
+                    message.warning(warnings.join('\n'));
+                    // Всё равно разрешаем resize!
+                  }
+
+                onLessonSave(updated);
               }}
             />
           </div>
@@ -158,6 +217,7 @@ const WeekViewByGrade: React.FC<Props> = ({
           teachers={teachers}
           allLessons={lessons}
           teacherAvailability={teacherAvailability}
+          {...(onLessonModalProps || {})}
           onClose={() => setShowModal(false)}
           onSave={(l) => { onLessonSave(l); setShowModal(false); }}
           onDelete={(id) => { onLessonDelete(id); setShowModal(false); }}

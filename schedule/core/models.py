@@ -17,7 +17,7 @@ class Grade(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
     class Meta:
-        verbose_name = "Класс"
+        verbose_name = "Grade"
         verbose_name_plural = "Классы"
 
     def __str__(self):
@@ -27,7 +27,7 @@ class Subject(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
-        verbose_name = "Предмет"
+        verbose_name = "Subject"
         verbose_name_plural = "Предметы"
 
     def __str__(self):
@@ -56,15 +56,19 @@ class TeacherAvailability(models.Model):
 class WeeklyNorm(models.Model):
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    hours_per_week = models.PositiveSmallIntegerField(help_text="Всего часов в неделю по предмету")
     lessons_per_week = models.PositiveSmallIntegerField(default=0, help_text="Уроков с учителем")
     courses_per_week = models.PositiveSmallIntegerField(default=0, help_text="Самостоятельных занятий (курсов)")
 
     class Meta:
         unique_together = ("grade", "subject")
         ordering = ["grade", "subject"]
-        verbose_name = "Недельная норма"
+        verbose_name = "WeeklyNorm"
         verbose_name_plural = "Недельные нормы"
+
+
+    @property
+    def hours_per_week(self):
+        return self.lessons_per_week + self.courses_per_week
 
     def __str__(self):
         return f"{self.grade} — {self.subject}: {self.hours_per_week} ч/нед"
@@ -75,7 +79,7 @@ class LessonType(models.Model):
     counts_towards_norm = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Тип урока"
+        verbose_name = "LessonType"
         verbose_name_plural = "Типы уроков"
 
     def __str__(self):
@@ -85,7 +89,7 @@ class AcademicYear(models.Model):
     name = models.CharField(max_length=20)
 
     class Meta:
-        verbose_name = "Учебный год"
+        verbose_name = "AcademicYear"
         verbose_name_plural = "Учебные годы"
 
     def __str__(self):
@@ -107,7 +111,7 @@ class TeacherSubject(models.Model):
 
     class Meta:
         unique_together = ("teacher", "subject")
-        verbose_name = "Предмет учителя"
+        verbose_name = "TeacherSubject"
         verbose_name_plural = "Учитель–предмет"
 
     def __str__(self):
@@ -127,7 +131,7 @@ class TeacherGrade(models.Model):
 
     class Meta:
         unique_together = ("teacher", "grade")
-        verbose_name = "Класс учителя"
+        verbose_name = "TeacherGrade"
         verbose_name_plural = "Учитель–класс"
 
     def __str__(self):
@@ -142,7 +146,7 @@ class GradeSubject(models.Model):
 
     class Meta:
         unique_together = ("grade", "subject")
-        verbose_name = "Предмет класса"
+        verbose_name = "GradeSubject"
         verbose_name_plural = "Класс–предмет"
 
     def __str__(self):
@@ -163,7 +167,7 @@ class StudentSubject(models.Model):
 
     class Meta:
         unique_together = ("student", "subject", "grade")
-        verbose_name = "Индивидуальный предмет ученика"
+        verbose_name = "StudentSubject"
         verbose_name_plural = "Ученик–предмет"
 
     def __str__(self):

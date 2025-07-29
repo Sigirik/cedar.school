@@ -27,6 +27,7 @@ export function validateLesson(
   teacherAvailability: TeacherSlot[] = []
 ): string[] {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const { id, teacher, grade, day_of_week, start_time, duration_minutes } = edited;
 
   // время начала/конца нового урока
@@ -61,12 +62,12 @@ export function validateLesson(
   );
   if (slots.length) {
     const insideSomeSlot = slots.some(a => {
-      const s = dayjs(a.start, 'HH:mm');
-      const e = dayjs(a.end,   'HH:mm');
+      const s = dayjs(a.start_time, 'HH:mm');
+      const e = dayjs(a.end_time,   'HH:mm');
       return !start.isBefore(s) && !end.isAfter(e);
     });
-    if (!insideSomeSlot) errors.push('Учитель недоступен в это время');
+    if (!insideSomeSlot) warnings.push('Учитель недоступен в это время');
   }
 
-  return errors;
+  return { errors, warnings };
 }

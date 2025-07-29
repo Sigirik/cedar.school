@@ -8,10 +8,11 @@ from .views import TemplateWeekViewSet, TemplateLessonViewSet
 from django.urls import path
 
 router = SimpleRouter()
-router.register('weeks', TemplateWeekViewSet)
-router.register('lessons', TemplateLessonViewSet)
+router.register(r'weeks', TemplateWeekViewSet, basename='templateweek')
 
 urlpatterns = [
-    *router.urls,
-    path('active-week/', TemplateWeekViewSet.as_view({'get': 'active'}), name='active-week'),
+    # Активная неделя
+    path('active-week/', TemplateWeekViewSet.as_view({'get': 'active_week'}), name='active-week'),
 ]
+
+urlpatterns += router.urls

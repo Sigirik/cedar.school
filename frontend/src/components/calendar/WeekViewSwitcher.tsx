@@ -35,10 +35,28 @@ interface WeeklyNorm {
   courses_per_week: number;
 }
 
+interface WeekViewSwitcherProps {
+  lessons: Lesson[];
+  subjects: ReferenceItem[];
+  grades: ReferenceItem[];
+  teachers: ReferenceItem[];
+  weeklyNorms: WeeklyNorm[];
+  teacherAvailability: any[];
+  source?: 'active' | 'draft';
+  onLessonSave?: (l: any) => void;
+  onLessonDelete?: (id: number) => void;
+  gradeSubjects?: { grade: number; subject: number }[];
+  teacherSubjects?: { teacher: number; subject: number }[];
+  teacherGrades?: { teacher: number; grade: number }[];
+}
+
 const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
   lessons, subjects, grades, teachers,
   weeklyNorms, teacherAvailability,
   onLessonSave, onLessonDelete,
+  gradeSubjects,
+  teacherSubjects,
+  teacherGrades,
   source = 'active'
 }) => {
   const [mode, setMode] = useState<'grade' | 'teacher' | 'norm'>('grade');
@@ -81,6 +99,11 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           teachers={teachers}
           teacherAvailability={teacherAvailability}
           source={source}
+          onLessonModalProps={source === 'draft' ? {
+            gradeSubjects,
+            teacherSubjects,
+            teacherGrades
+          } : undefined}
           onLessonSave={onLessonSave!}
           onLessonDelete={onLessonDelete!}
         />
@@ -93,12 +116,31 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           teachers={teachers}
           teacherAvailability={teacherAvailability}
           source={source}
+          onLessonModalProps={source === 'draft' ? {
+            gradeSubjects,
+            teacherSubjects,
+            teacherGrades
+          } : undefined}
           onLessonSave={onLessonSave!}
           onLessonDelete={onLessonDelete!}
         />
       )}
       {mode === 'norm' && <WeekNormSummary lessons={lessons} weeklyNorms={weeklyNorms} />}
-      {mode === 'summary' && <WeekLessonSummaryTable lessons={lessons} subjects={subjects} grades={grades} teachers={teachers} />}
+      {mode === 'summary' && (
+        <WeekLessonSummaryTable
+          lessons={lessons}
+          subjects={subjects}
+          grades={grades}
+          teachers={teachers}
+          onLessonModalProps={source === 'draft' ? {
+            gradeSubjects,
+            teacherSubjects,
+            teacherGrades
+          } : undefined}
+          onLessonSave={onLessonSave!}
+          onLessonDelete={onLessonDelete!}
+        />
+      )}
     </div>
   );
 };

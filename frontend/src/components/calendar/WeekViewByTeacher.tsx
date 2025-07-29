@@ -1,13 +1,8 @@
-// WeekViewByTeacher.tsx
-// 👩‍🏫 Отображает расписание по учителям через FullCalendarTemplateView
-// 📆 Отображает только дни ПН–ПТ (2025-07-07 — 2025-07-11)
-// 🎨 Цвет по статусу норм: светло-красный — over, жёлтый — under, светло-зелёный — ok
-// 🟦 Добавляет фоновую заливку доступности учителя через prop teacherAvailability
-// 👓 Отдельный FullCalendar для каждого учителя
-// ⛔ Без drag-n-drop в активной неделе
-
-import React from 'react';
+import React, { useState } from 'react';
+import { message } from 'antd';
 import FullCalendarTemplateView from './FullCalendarTemplateView';
+import LessonEditorModal from './LessonEditorModal';
+import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
 
 interface Lesson {
   id: number;
@@ -33,6 +28,18 @@ interface TeacherAvailability {
   end_time: string;
 }
 
+interface Props {
+  lessons: Lesson[];
+  teacherAvailability?: TeacherAvailability[];
+  source?: 'draft' | 'active';
+  subjects?: { id: number; name: string }[];
+  grades?: { id: number; name: string }[];
+  teachers?: { id: number; first_name: string; last_name: string; middle_name?: string }[];
+  onLessonModalProps?: any;
+  onLessonSave?: (l: Lesson) => void;
+  onLessonDelete?: (id: number) => void;
+}
+
 const weekdayMap = [
   '2025-07-07', // Пн
   '2025-07-08',
@@ -47,14 +54,57 @@ const statusColorMap: Record<string, string> = {
   ok: '#bbf7d0'
 };
 
-const WeekViewByTeacher: React.FC<{
-  lessons: Lesson[];
-  teacherAvailability?: TeacherAvailability[];
-  source?: 'draft' | 'active';
-}> = ({ lessons, teacherAvailability = [], source = 'active' }) => {
+const toPlainLesson = (l: any): PlainLesson => ({
+  id: l.id,
+  grade: l.grade,
+  teacher: l.teacher,
+  day_of_week: l.day_of_week,
+  start_time: l.start_time,
+  duration_minutes: l.duration_minutes,
+  // можно добавить type если требуется
+});
+const toTeacherSlot = (a: any): TeacherSlot => ({
+  teacher: a.teacher,
+  day_of_week: a.day_of_week,
+  start_time: a.start_time ?? a.start,  // поддержка разных полей
+  end_time: a.end_time ?? a.end,
+});
+
+const WeekViewByTeacher: React.FC<Props> = ({
+  lessons,
+  teacherAvailability = [],
+  source = 'active',
+  subjects = [],
+  grades = [],
+  teachers = [],
+  onLessonModalProps = {},
+  onLessonSave,
+  onLessonDelete,
+}) => {
+  const [selected, setSelected] = useState<Lesson | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
   if (!lessons || lessons.length === 0) return <p className="text-gray-500">Нет уроков</p>;
 
   const teacherIds = [...new Set(lessons.map(l => l.teacher))];
+
+  const checkLessons: PlainLesson[] = lessons.map(toPlainLesson);
+  const checkAvailability: TeacherSlot[] = teacherAvailability.map(toTeacherSlot);
+
+  /** Пересчитать объект урока после drag‑n‑drop / resize */
+  const rebuildLesson = (ev: any, src: Lesson): Lesson => {
+    const jsDate = ev.event.start as Date;
+    const endJs = ev.event.end as Date;
+    const newDay = jsDate.getDay() === 1 ? 0 : jsDate.getDay() - 1;
+    const hh = String(jsDate.getHours()).padStart(2, '0');
+    const mm = String(jsDate.getMinutes()).padStart(2, '0');
+    return {
+      ...src,
+      day_of_week: newDay,
+      start_time: `${hh}:${mm}`,
+      duration_minutes: Math.round((endJs.getTime() - jsDate.getTime()) / 60000),
+    };
+  };
 
   return (
     <div className="p-4">
@@ -78,7 +128,7 @@ const WeekViewByTeacher: React.FC<{
           const emoji = l.type === 'course' ? '📗' : '📘';
 
           return {
-            id: `lesson-${l.id}`,
+            id: String(l.id),
             title: `${l.start_time} · ${l.duration_minutes} мин\n${emoji} ${l.subject_name}\n🏫 ${l.grade_name}`,
             start,
             end,
@@ -96,7 +146,7 @@ const WeekViewByTeacher: React.FC<{
         const availabilityEvents = teacherAvailability
           .filter(a => a.teacher === teacherId)
           .map((a, idx) => {
-            const dayIndex = (a.day_of_week + 6) % 7;  // 👈 теперь "0" — Пн
+            const dayIndex = a.day_of_week;  // "0" — Пн
             const baseDate = weekdayMap[dayIndex];
 
             const cleanStart = a.start_time.slice(0, 5);
@@ -104,27 +154,16 @@ const WeekViewByTeacher: React.FC<{
             const start = `${baseDate}T${cleanStart}`;
             const end = `${baseDate}T${cleanEnd}`;
 
-            const entry = {
+            return {
               id: `availability-${teacherId}-${idx}`,
               start,
               end,
               display: 'background',
               backgroundColor: '#dbeafe'
             };
-
-            return entry;
           });
 
-            const testBackground = {
-              id: `test-bg-${teacherId}`,
-              start: '2025-07-08T10:00:00',  // вторник
-              end: '2025-07-08T12:00:00',
-              display: 'background',
-              backgroundColor: '#93c5fd'  // голубой
-            };
-
-
-            const events = [...lessonEvents, ...availabilityEvents];;
+        const events = [...lessonEvents, ...availabilityEvents];
 
         return (
           <div key={teacherId} className="mb-8">
@@ -132,10 +171,80 @@ const WeekViewByTeacher: React.FC<{
             <FullCalendarTemplateView
               events={events}
               editable={source === 'draft'}
-              onEventClick={(info) => console.log("👆 Клик (учитель):", info.event)}
-              onEventDrop={(info) => console.log("📦 Перемещение (учитель):", info.event)}
-              onEventResize={(info) => console.log("📏 Растяжение (учитель):", info.event)}
+              onEventClick={(info) => {
+                if (source !== 'draft') return;
+                const id = Number(info.event.id);
+                const l = teacherLessons.find(x => x.id === id);
+                if (l) {
+                  setSelected(l);
+                  setShowModal(true);
+                }
+              }}
+              onEventDrop={(info) => {
+                const id = Number(info.event.id);
+                const src = lessons.find(x => x.id === id);
+                if (!src) return;
+                const updated = rebuildLesson(info, src);
+
+                  // Проверки!
+                    const { errors, warnings } = validateLesson(
+                        toPlainLesson(updated),
+                        checkLessons,
+                        checkAvailability
+                    );
+                  if (errors.length) {
+                    message.error(errors.join('\n'));
+                    // ОТМЕНИТЬ drag-n-drop — вернём событие на старое место:
+                    info.revert();
+                    return;
+                  }
+                  if (warnings.length) {
+                    message.warning(warnings.join('\n'));
+                    // Всё равно разрешаем drop!
+                  }
+                onLessonSave(updated);
+              }}
+              /** ⬇️ resize */
+              onEventResize={(info) => {
+                const id = Number(info.event.id);
+                const src = lessons.find(x => x.id === id);
+                if (!src) return;
+                const updated = rebuildLesson(info, src);
+
+                  // Проверки!
+                  const { errors, warnings } = validateLesson(
+                        toPlainLesson(updated),
+                        checkLessons,
+                        checkAvailability
+                  );
+                  if (errors.length) {
+                    message.error(errors.join('\n'));
+                    info.revert();
+                    return;
+                  }
+                  if (warnings.length) {
+                    message.warning(warnings.join('\n'));
+                    // Всё равно разрешаем resize!
+                  }
+
+                onLessonSave(updated);
+              }}
             />
+            {selected && (
+              <LessonEditorModal
+                open={showModal}
+                lesson={selected}
+                grades={grades || []}
+                subjects={subjects || []}
+                teachers={teachers || []}
+                allLessons={lessons}
+                teacherAvailability={teacherAvailability}
+                {...(onLessonModalProps || {})}
+                onClose={() => setShowModal(false)}
+                onSave={(l) => { if (onLessonSave) onLessonSave(l); setShowModal(false); }}
+                onDelete={(id) => { if (onLessonDelete) onLessonDelete(id); setShowModal(false); }}
+              />
+            )}
           </div>
         );
       })}

@@ -5,9 +5,8 @@ ViewSet'ы для CRUD-операций справочников core через
 
 from rest_framework import viewsets
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear, GradeSubject, StudentSubject
-from .serializers import GradeSerializer, SubjectSerializer, TeacherAvailabilitySerializer, WeeklyNormSerializer, LessonTypeSerializer, AcademicYearSerializer, GradeSubjectSerializer, StudentSubjectSerializer
-
+from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear, GradeSubject, TeacherSubject, TeacherGrade, StudentSubject
+from .serializers import GradeSerializer, SubjectSerializer, TeacherAvailabilitySerializer, WeeklyNormSerializer, LessonTypeSerializer, AcademicYearSerializer, GradeSubjectSerializer, TeacherSubjectSerializer, TeacherGradeSerializer, StudentSubjectSerializer
 
 class GradeViewSet(ReadOnlyModelViewSet):
     queryset = Grade.objects.all()
@@ -36,6 +35,14 @@ class AcademicYearViewSet(ReadOnlyModelViewSet):
 class GradeSubjectViewSet(viewsets.ModelViewSet):
     queryset = GradeSubject.objects.select_related('grade', 'subject').all()
     serializer_class = GradeSubjectSerializer
+
+class TeacherSubjectViewSet(viewsets.ModelViewSet):
+    queryset = TeacherSubject.objects.all()
+    serializer_class = TeacherSubjectSerializer
+
+class TeacherGradeViewSet(viewsets.ModelViewSet):
+    queryset = TeacherGrade.objects.all()
+    serializer_class = TeacherGradeSerializer
 
 class StudentSubjectViewSet(viewsets.ModelViewSet):
     queryset = StudentSubject.objects.select_related('student', 'grade', 'subject').all()

@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users',
-    # 'schedule',
     'schedule.core',
     'schedule.template',
     'schedule.draft',

@@ -1,6 +1,5 @@
-// WeekLessonSummaryTable.tsx
-
-import React from 'react';
+import React, { useState } from 'react';
+import LessonEditorModal from './LessonEditorModal';
 
 interface Lesson {
   subject: number;
@@ -17,9 +16,10 @@ interface Lesson {
 
 interface Teacher {
   id: number;
-  full_name: string;
+  full_name?: string;
   first_name: string;
   last_name: string;
+  middle_name?: string;
 }
 
 interface ReferenceItem {
@@ -32,17 +32,20 @@ interface Props {
   subjects: ReferenceItem[];
   grades: ReferenceItem[];
   teachers: Teacher[];
+  teacherAvailability?: any[];
+  onLessonModalProps?: any;
+  onLessonSave?: (l: Lesson) => void;
+  onLessonDelete?: (id: number) => void;
 }
 
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 
-// Пастельная палитра
+// Пастельная палитра для учителей
 function generatePastelPalette(count: number): string[] {
   const palette: string[] = [];
   const saturation = 70;
   const lightness = 85;
   const step = 360 / count;
-
   for (let i = 0; i < count; i++) {
     const hue = Math.round(i * step) % 360;
     palette.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
@@ -59,12 +62,18 @@ function getTeacherColorMap(teachers: Teacher[]): Record<number, string> {
   return map;
 }
 
-const WeekLessonSummaryTable: React.FC<Props> = ({ lessons, teachers }) => {
+const WeekLessonSummaryTable: React.FC<Props> = ({
+  lessons, subjects, grades, teachers, teacherAvailability = [],
+  onLessonModalProps = {}, onLessonSave, onLessonDelete
+}) => {
+  const [selected, setSelected] = useState<Lesson | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
   type Row = {
     start_time: string;
     grade_name: string;
     duration_minutes: number;
-    cells: Record<number, Lesson | undefined>; // ключи 0–4
+    cells: Record<number, Lesson | undefined>;
   };
 
   const rowMap = new Map<string, Row>();
@@ -117,25 +126,24 @@ const WeekLessonSummaryTable: React.FC<Props> = ({ lessons, teachers }) => {
           {markedRows.map((row, idx) => (
             <tr key={idx} className={row.isNewHourStart ? 'border-t-4 border-gray-400' : ''}>
               <td className="border p-1 text-xs text-gray-600 font-mono">
-                  <span className={row.isNewHourStart ? 'font-bold' : ''}>{row.start_time}</span>
-                </td>
+                <span className={row.isNewHourStart ? 'font-bold' : ''}>{row.start_time}</span>
+              </td>
               {DAYS.map((_, i) => {
                 const l = row.cells[i];
                 return (
                   <td key={i} className="border p-1 align-top">
                     {l ? (
                       <div
-                        className="p-1 rounded text-xs leading-tight whitespace-pre-line text-black"
+                        className="p-1 rounded text-xs leading-tight whitespace-pre-line text-black cursor-pointer"
                         style={{ backgroundColor: teacherColors[l.teacher] }}
+                        onClick={() => {
+                          setSelected(l);
+                          setShowModal(true);
+                        }}
                       >
-                        <div
-                          className="p-1 rounded text-xs leading-tight text-black break-words whitespace-normal"
-                          style={{ backgroundColor: teacherColors[l.teacher] }}
-                        >
-                          {row.grade_name}&nbsp;⏱{row.duration_minutes}&nbsp;
-                          {l.subject_name}&nbsp;
-                          [{l.teacher_name}]
-                        </div>
+                        {row.grade_name}&nbsp;⏱{row.duration_minutes}&nbsp;
+                        {l.subject_name}&nbsp;
+                        [{l.teacher_name}]
                       </div>
                     ) : (
                       <div className="text-gray-300 text-xs text-center">—</div>
@@ -147,6 +155,21 @@ const WeekLessonSummaryTable: React.FC<Props> = ({ lessons, teachers }) => {
           ))}
         </tbody>
       </table>
+      {selected && (
+        <LessonEditorModal
+          open={showModal}
+          lesson={selected}
+          grades={grades}
+          subjects={subjects}
+          teachers={teachers}
+          allLessons={lessons}
+          teacherAvailability={teacherAvailability}
+          {...(onLessonModalProps || {})}
+          onClose={() => setShowModal(false)}
+          onSave={(l) => { onLessonSave(l); setShowModal(false); }}
+          onDelete={(id) => { onLessonDelete(id); setShowModal(false); }}
+        />
+      )}
     </div>
   );
 };

@@ -15,7 +15,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ children }) => {
   useEffect(() => {
     // Пингуем сервер, чтобы проверить сессию
     axios
-      .get("/api/template/template-week/active/")
+      .get("/api/template/active-week/")
       .then(() => setLoggedIn(true))
       .catch(() => setLoggedIn(false));
   }, []);

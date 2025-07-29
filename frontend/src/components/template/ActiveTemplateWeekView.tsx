@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
-import { prepareLessons } from '../utils/prepareLessons';
+import { prepareLessons } from '../../utils/prepareLessons';
 
 const ActiveTemplateWeekView: React.FC = () => {
   const [preparedLessons, setPreparedLessons] = useState<any[]>([]);
@@ -23,20 +23,25 @@ const ActiveTemplateWeekView: React.FC = () => {
     async function fetchData() {
       try {
         const [weekRes, subjectsRes, gradesRes, teachersRes, normsRes, availabilityRes] = await Promise.all([
-          axios.get("/api/template/template-week/active/"),
-          axios.get("/api/ktp/subjects/"),
-          axios.get("/api/ktp/grades/"),
-          axios.get("/api/ktp/teachers/"),
-          axios.get("/api/ktp/weekly-norms/"),
-          axios.get("/api/template/teacher-availability/")
+          axios.get("/api/template/active-week/"),
+          axios.get("/api/core/subjects/"),
+          axios.get("/api/core/grades/"),
+          axios.get("/api/users/teachers/"),
+          axios.get("/api/core/weekly-norms/"),
+          axios.get("/api/core/availabilities/")
         ]);
 
-        const lessons = weekRes.data.lessons || [];
+        const lessons = weekRes.data.lessons || weekRes.data.template?.lessons || [];
         const subjects = subjectsRes.data;
         const grades = gradesRes.data;
-        const norms = normsRes.data;
         const teachers = teachersRes.data;
         const availability = availabilityRes.data || [];
+
+        const norms = normsRes.data.map((n: any) => ({
+          ...n,
+          subject: typeof n.subject === 'object' ? n.subject.id : n.subject,
+          grade: typeof n.grade === 'object' ? n.grade.id : n.grade,
+        }));
 
         setSubjects(subjects);
         setGrades(grades);

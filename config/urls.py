@@ -19,13 +19,9 @@ from django.urls import path, include
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("users/", include("users.urls")),
+    path("api/users/", include("users.urls")),
     path('accounts/', include('django.contrib.auth.urls')),
     path("api-auth/", include("rest_framework.urls")),
-    # path("schedule/", include("schedule.web_urls")),  # HTML-страницы
-    # path("api/template/", include("schedule.template_api_urls")),
-    # path("api/ktp/", include("schedule.ktp_api_urls")),
-    # path("api/draft/", include("schedule.draft_api_urls")),
     path('api/core/', include('schedule.core.urls')),
     path('api/template/', include('schedule.template.urls')),
     path('api/draft/', include('schedule.draft.urls')),

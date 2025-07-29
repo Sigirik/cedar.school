@@ -7,21 +7,6 @@ from rest_framework import serializers
 from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear
 from .models import TeacherSubject, TeacherGrade, GradeSubject, StudentSubject
 
-# --- Сериализаторы связей TeacherSubject и TeacherGrade ---
-
-class TeacherSubjectSerializer(serializers.ModelSerializer):
-    subject = serializers.StringRelatedField()
-    class Meta:
-        model = TeacherSubject
-        fields = ['id', 'subject']
-
-class TeacherGradeSerializer(serializers.ModelSerializer):
-    grade = serializers.StringRelatedField()
-    class Meta:
-        model = TeacherGrade
-        fields = ['id', 'grade']
-
-# --- Остальные справочники ---
 
 class TeacherAvailabilitySerializer(serializers.ModelSerializer):
     teacher = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -57,11 +42,19 @@ class AcademicYearSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 class GradeSubjectSerializer(serializers.ModelSerializer):
-    grade = serializers.StringRelatedField()
-    subject = serializers.StringRelatedField()
     class Meta:
         model = GradeSubject
         fields = ['id', 'grade', 'subject']
+
+class TeacherSubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherSubject
+        fields = ['id', 'teacher', 'subject']
+
+class TeacherGradeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherGrade
+        fields = ['id', 'teacher', 'grade']
 
 class StudentSubjectSerializer(serializers.ModelSerializer):
     student = serializers.StringRelatedField()

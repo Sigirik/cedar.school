@@ -23,5 +23,13 @@ def dashboard(request):
     return render(request, template, {"user": user})
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.all().prefetch_related('availabilities')
+    queryset = User.objects.all()  # без availabilities
+    serializer_class = UserSerializer
+
+class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role=User.Role.TEACHER).prefetch_related('availabilities')
+    serializer_class = UserSerializer
+
+class StudentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.filter(role=User.Role.STUDENT)
     serializer_class = UserSerializer
