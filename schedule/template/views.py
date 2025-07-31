@@ -5,9 +5,11 @@ ViewSets для работы с шаблонными неделями и уро�
 
 from rest_framework import viewsets
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from .models import TemplateWeek, TemplateLesson
 from .serializers import TemplateWeekSerializer, TemplateLessonSerializer
+from schedule.draft.models import TemplateWeekDraft
 
 from django.shortcuts import get_object_or_404
 

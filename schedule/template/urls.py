@@ -7,6 +7,7 @@ from rest_framework.routers import SimpleRouter
 from .views import TemplateWeekViewSet, TemplateLessonViewSet
 from django.urls import path
 
+
 router = SimpleRouter()
 router.register(r'weeks', TemplateWeekViewSet, basename='templateweek')
 

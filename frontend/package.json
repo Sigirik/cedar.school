@@ -14,9 +14,11 @@
     "@fullcalendar/interaction": "^6.1.18",
     "@fullcalendar/react": "^6.1.18",
     "@fullcalendar/timegrid": "^6.1.18",
+    "@shadcn/ui": "^0.0.4",
     "antd": "^5.26.6",
     "axios": "^1.10.0",
     "dayjs": "^1.11.13",
+    "lucide-react": "^0.535.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.6.3"

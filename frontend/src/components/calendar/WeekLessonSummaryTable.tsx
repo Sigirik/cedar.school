@@ -113,6 +113,26 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
 
   return (
     <div className="overflow-x-auto border rounded">
+        <div className="flex justify-end p-2">
+          <button
+            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+            onClick={() => {
+              const newLesson: Lesson = {
+                  id: Date.now(),
+                  grade: '',
+                  subject: '',
+                  teacher: '',
+                  day_of_week: 0,
+                  start_time: '08:00',
+                  duration_minutes: 45,
+              };
+              setSelected(newLesson);
+              setShowModal(true);
+            }}
+          >
+            + Новый урок
+          </button>
+        </div>
       <table className="min-w-full text-sm table-fixed border-collapse">
         <thead>
           <tr className="bg-gray-100">
@@ -155,6 +175,26 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
           ))}
         </tbody>
       </table>
+        <div className="flex justify-end p-2">
+          <button
+            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+            onClick={() => {
+              const emptyLesson: Lesson = {
+                  id: Date.now(),
+                  grade: '',
+                  subject: '',
+                  teacher: '',
+                  day_of_week: 0,
+                  start_time: '08:00',
+                  duration_minutes: 45,
+              };
+              setSelected(emptyLesson);
+              setShowModal(true);
+            }}
+          >
+            + Новый урок
+          </button>
+        </div>
       {selected && (
         <LessonEditorModal
           open={showModal}

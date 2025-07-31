@@ -1,6 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { formatSubject, formatGrade } from "../../utils/prepareLessons";
 
 type KTPEntry = {
   id: number;
@@ -31,27 +31,68 @@ type KTPTemplate = {
   id: number;
   name: string;
   subject: number;
+  subject_data?: { name: string };
   grade: number;
+  grade_data?: { name: string };
   academic_year: number;
   sections: KTPSection[];
 };
 
-const API_BASE = "http://localhost:8000/schedule/api/ktp/";
+type GroupedTemplates = {
+  [subjectTitle: string]: {
+    subjectId: number;
+    classes: { gradeId: number; gradeTitle: string; templateId: number }[];
+  };
+};
 
 const KtpEditor: React.FC = () => {
   const [templates, setTemplates] = useState<KTPTemplate[]>([]);
+  const [groupedTemplates, setGroupedTemplates] = useState<GroupedTemplates>({});
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<KTPTemplate | null>(null);
-  const [newSectionTitle, setNewSectionTitle] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
+  const [grades, setGrades] = useState<{ id: number; name: string }[]>([]);
 
-  useEffect(() => {
-    axios.get(API_BASE + "ktp-templates/").then((res) => setTemplates(res.data));
-  }, []);
+    useEffect(() => {
+      axios.get("/api/core/subjects/").then((res) => setSubjects(res.data));
+      axios.get("/api/core/grades/").then((res) => setGrades(res.data));
+    }, []);
+
+    useEffect(() => {
+      if (subjects.length === 0 || grades.length === 0) return;
+
+      axios.get("/api/ktp/templates/").then((res) => {
+        const data: KTPTemplate[] = res.data;
+        const grouped: GroupedTemplates = {};
+        data.forEach((tpl) => {
+          const subj = subjects.find((s) => s.id === tpl.subject);
+          const grade = grades.find((g) => g.id === tpl.grade);
+          const subjName = formatSubject(subj);
+          const gradeName = formatGrade(grade);
+
+          if (!grouped[subjName]) {
+            grouped[subjName] = { subjectId: tpl.subject, classes: [] };
+          }
+
+          grouped[subjName].classes.push({
+            gradeId: tpl.grade,
+            gradeTitle: gradeName,
+            templateId: tpl.id,
+          });
+        });
+
+        setGroupedTemplates(grouped);
+        setTemplates(data);
+      });
+    }, [subjects, grades]);
 
   useEffect(() => {
     if (selectedTemplateId !== null) {
-      axios.get(API_BASE + "ktp-templates/" + selectedTemplateId + "/").then((res) => {
+      axios.get("/api/ktp/templates/" + selectedTemplateId + "/").then((res) => {
         setSelectedTemplate(res.data);
       });
     }
@@ -59,7 +100,7 @@ const KtpEditor: React.FC = () => {
 
   const refreshTemplate = () => {
     if (selectedTemplateId !== null) {
-      axios.get(API_BASE + "ktp-templates/" + selectedTemplateId + "/").then((res) => {
+      axios.get("/api/ktp/templates/" + selectedTemplateId + "/").then((res) => {
         setSelectedTemplate(res.data);
       });
     }
@@ -70,7 +111,7 @@ const KtpEditor: React.FC = () => {
     const maxOrder =
       selectedTemplate.sections.reduce((max, sec) => Math.max(max, sec.order), 0) ?? 0;
     axios
-      .post(API_BASE + "ktp-sections/", {
+      .post("/api/ktp/sections/", {
         ktp_template: selectedTemplateId,
         title: newSectionTitle,
         description: "",
@@ -83,39 +124,54 @@ const KtpEditor: React.FC = () => {
       });
   };
 
-  const moveSection = (sectionId: number, direction: "up" | "down") => {
-    if (!selectedTemplate) return;
-    const sections = [...selectedTemplate.sections].sort((a, b) => a.order - b.order);
-    const index = sections.findIndex((s) => s.id === sectionId);
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-
-    if (index === -1 || targetIndex < 0 || targetIndex >= sections.length) return;
-
-    const current = sections[index];
-    const target = sections[targetIndex];
-
-    Promise.all([
-      axios.patch(API_BASE + "ktp-sections/" + current.id + "/", { order: target.order }),
-      axios.patch(API_BASE + "ktp-sections/" + target.id + "/", { order: current.order }),
-    ]).then(() => refreshTemplate());
-  };
-
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">КТП: редактор шаблона</h1>
+      <h1 className="text-xl font-bold mb-4">КТП: редактор</h1>
 
-      <select
-        className="border p-2 mb-4"
-        onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
-        value={selectedTemplateId ?? ""}
-      >
-        <option value="">Выберите шаблон КТП</option>
-        {templates.map((tpl) => (
-          <option key={tpl.id} value={tpl.id}>
-            {tpl.name}
-          </option>
-        ))}
-      </select>
+      {/* Выбор предмета и класса */}
+      <div className="flex gap-4 mb-4">
+        <select
+          className="border p-2"
+          onChange={(e) => {
+            const subjId = Number(e.target.value);
+            setSelectedSubjectId(subjId);
+            setSelectedGradeId(null);
+          }}
+          value={selectedSubjectId ?? ""}
+        >
+          <option value="">Выберите предмет</option>
+          {Object.entries(groupedTemplates).map(([title, group]) => (
+            <option key={group.subjectId} value={group.subjectId}>
+              {title}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="border p-2"
+          onChange={(e) => {
+            const gradeId = Number(e.target.value);
+            setSelectedGradeId(gradeId);
+            const template = templates.find(
+              (tpl) => tpl.subject === selectedSubjectId && tpl.grade === gradeId
+            );
+            if (template) setSelectedTemplateId(template.id);
+          }}
+          value={selectedGradeId ?? ""}
+          disabled={!selectedSubjectId}
+        >
+          <option value="">Выберите класс</option>
+          {selectedSubjectId &&
+            groupedTemplates &&
+            Object.values(groupedTemplates)
+              .find((g) => g.subjectId === selectedSubjectId)
+              ?.classes.map((cls) => (
+                <option key={`${cls.gradeId}-${cls.templateId}`} value={cls.gradeId}>
+                  {cls.gradeTitle}
+                </option>
+              ))}
+        </select>
+      </div>
 
       {selectedTemplate && (
         <>
@@ -131,117 +187,64 @@ const KtpEditor: React.FC = () => {
             .sort((a, b) => a.order - b.order)
             .map((section) => (
               <div key={section.id} className="mb-6 border p-3 rounded bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  <h2 className="text-lg font-semibold">
-                    {section.order}. {section.title} ({section.hours} ч)
-                  </h2>
-                  {editMode && (
-                    <div className="space-x-1">
-                      <button
-                        className="text-sm bg-blue-500 text-white px-2 py-1 rounded"
-                        onClick={() => moveSection(section.id, "up")}
-                      >
-                        🔼
-                      </button>
-                      <button
-                        className="text-sm bg-blue-500 text-white px-2 py-1 rounded"
-                        onClick={() => moveSection(section.id, "down")}
-                      >
-                        🔽
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <h2 className="text-lg font-semibold mb-2">
+                  📂 {section.order}. {section.title} ({section.hours} ч)
+                </h2>
 
-                {section.entries.length > 0 ? (
-                  <table className="table-auto w-full border text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border px-2">#</th>
-                        <th className="border px-2">Тип</th>
-                        <th className="border px-2">Тема</th>
-                        <th className="border px-2">Дата</th>
-                        <th className="border px-2">Домашка</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <table className="table-auto w-full border text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border px-2">Дата план</th>
+                      <th className="border px-2">Дата факт</th>
+                      <th className="border px-2">Тип</th>
+                      <th className="border px-2">Тема</th>
+                      <th className="border px-2">Материалы</th>
+                      <th className="border px-2">Домашка</th>
+                      <th className="border px-2">Результаты</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {section.entries
                       .slice()
                       .sort((a, b) => a.order - b.order)
-                      .map((entry, index) => (
+                      .map((entry) => (
                         <tr key={entry.id}>
-                          <td className="border px-2">{entry.lesson_number}</td>
-                          <td className="border px-2">
-                            {editMode ? (
-                              <select
-                                value={entry.type}
-                                onChange={(e) =>
-                                  handleEntryEdit(section.id, entry.id, { type: e.target.value })
-                                }
-                              >
-                                <option value="lesson">Урок</option>
-                                <option value="course">Курс</option>
-                              </select>
-                            ) : (
-                              entry.type === "lesson" ? "Урок" : "Курс"
-                            )}
-                          </td>
-                          <td className="border px-2">
-                            {editMode ? (
-                              <input
-                                value={entry.title}
-                                onChange={(e) =>
-                                  handleEntryEdit(section.id, entry.id, { title: e.target.value })
-                                }
-                              />
-                            ) : (
-                              entry.title
-                            )}
-                          </td>
+                          <td className="border px-2">{entry.planned_date ?? "-"}</td>
                           <td className="border px-2">
                             {editMode ? (
                               <input
                                 type="date"
-                                value={entry.planned_date ?? ""}
+                                className="border p-1"
+                                value={entry.actual_date ?? ""}
                                 onChange={(e) =>
                                   handleEntryEdit(section.id, entry.id, {
-                                    planned_date: e.target.value,
+                                    actual_date: e.target.value,
                                   })
                                 }
                               />
                             ) : (
-                              entry.planned_date ?? "-"
+                              entry.actual_date ?? "-"
                             )}
                           </td>
+                          <td className="border px-2">{entry.type === "course" ? "Курс" : "Урок"}</td>
+                          <td className="border px-2">{entry.title}</td>
+                          <td className="border px-2">{entry.materials ?? "-"}</td>
+                          <td className="border px-2">{entry.homework ?? "-"}</td>
+                          <td className="border px-2">{entry.planned_outcomes ?? "-"}</td>
                           <td className="border px-2">
-                            {editMode ? (
-                              <input
-                                value={entry.homework ?? ""}
-                                onChange={(e) =>
-                                  handleEntryEdit(section.id, entry.id, { homework: e.target.value })
-                                }
-                              />
-                            ) : (
-                              entry.homework ?? "-"
-                            )}
-                          </td>
-                          <td className="border px-2">
-                            {editMode && (
-                              <>
-                                <button onClick={() => moveEntry(section, entry, "up")}>🔼</button>
-                                <button onClick={() => moveEntry(section, entry, "down")}>🔽</button>
-                                <button onClick={() => saveEntry(entry.id)}>💾</button>
-                                <button onClick={() => deleteEntry(entry.id)}>🗑️</button>
-                              </>
-                            )}
+                              {editMode && (
+                                <div className="flex gap-1">
+                                  <button onClick={() => moveEntry(section, entry, "up")}>🔼</button>
+                                  <button onClick={() => moveEntry(section, entry, "down")}>🔽</button>
+                                  <button onClick={() => saveEntry(entry.id)}>💾</button>
+                                  <button onClick={() => deleteEntry(entry.id)}>🗑️</button>
+                                </div>
+                              )}
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p className="text-gray-500">Нет записей</p>
-                )}
+                  </tbody>
+                </table>
               </div>
             ))}
 

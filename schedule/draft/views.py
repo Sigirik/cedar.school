@@ -1,12 +1,13 @@
 """
 Функции для управления единственным активным черновиком недели (универсально и прозрачно).
 """
-
+from django.utils.timezone import now
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import TemplateWeekDraft
 from .serializers import TemplateWeekDraftSerializer
+from schedule.core.models import AcademicYear
 from schedule.template.models import TemplateWeek, TemplateLesson
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -48,7 +49,7 @@ def create_draft_from_template(request):
             "day_of_week": l.day_of_week,
             "start_time": str(l.start_time),
             "duration_minutes": l.duration_minutes,
-            "type": l.type.key
+            "type": l.type.key if l.type else None
         }
         for l in lessons
     ]
@@ -103,11 +104,12 @@ def commit_draft(request):
     TemplateWeek.objects.filter(is_active=True).update(is_active=False)
     # Создаём новую активную неделю
     week = TemplateWeek.objects.create(
-        name="Опубликовано из черновика",
-        academic_year=draft.base_week.academic_year if draft.base_week else None,
+        name=f"Шаблон от {now().date().isoformat()}",
+        academic_year=draft.base_week.academic_year if draft.base_week else AcademicYear.objects.first(),
         is_active=True,
         description="Опубликовано пользователем {}".format(request.user.username)
     )
+    print("🔥 COMMIT LESSONS:", lessons)
     for l in lessons:
         TemplateLesson.objects.create(
             template_week=week,
@@ -124,3 +126,9 @@ def commit_draft(request):
     draft.change_history = []
     draft.save()
     return Response({"detail": "Черновик опубликован. Неделя создана.", "week_id": week.id})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def draft_exists(request):
+    exists = TemplateWeekDraft.objects.filter(user=request.user).exists()
+    return Response({ "exists": exists })

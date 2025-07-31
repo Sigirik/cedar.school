@@ -84,7 +84,7 @@ const WeekViewByGrade: React.FC<Props> = ({
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  if (!lessons.length) return <p className="text-gray-500">Нет уроков</p>;
+//  if (!lessons.length) return <p className="text-gray-500">Нет уроков</p>;
 
   const gradeIds = [...new Set(lessons.map(l => l.grade))];
 
@@ -108,7 +108,27 @@ const WeekViewByGrade: React.FC<Props> = ({
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Расписание по классам</h2>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold mb-4">Расписание по классам</h2>
+          <button
+            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+            onClick={() => {
+              const newLesson: Lesson = {
+                  id: Date.now(),
+                  grade: '',
+                  subject: '',
+                  teacher: '',
+                  day_of_week: 0,
+                  start_time: '08:00',
+                  duration_minutes: 45,
+              };
+              setSelected(newLesson);
+              setShowModal(true);
+            }}
+          >
+            + Новый урок
+          </button>
+      </div>
 
       {gradeIds.map((gradeId) => {
         const gradeLessons = lessons.filter(l => l.grade === gradeId);
@@ -138,7 +158,29 @@ const WeekViewByGrade: React.FC<Props> = ({
 
         return (
           <div key={gradeId} className="mb-8">
-            <h3 className="text-md font-bold mb-2">🏫 {gradeName}</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-md font-bold">🏫 {gradeName}</h3>
+              {source === 'draft' && (
+                <button
+                  className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+                  onClick={() => {
+                    const emptyLesson: Lesson = {
+                      id: Date.now(), // временный ID
+                      grade: gradeId,
+                      subject: '',
+                      teacher: '',
+                      day_of_week: 0,
+                      start_time: '08:00',
+                      duration_minutes: 45,
+                    };
+                    setSelected(emptyLesson);
+                    setShowModal(true);
+                  }}
+                >
+                  + Новый урок
+                </button>
+              )}
+            </div>
 
             <FullCalendarTemplateView
               events={events}

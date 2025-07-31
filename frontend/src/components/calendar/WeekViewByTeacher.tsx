@@ -84,7 +84,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  if (!lessons || lessons.length === 0) return <p className="text-gray-500">Нет уроков</p>;
+//   if (!lessons || lessons.length === 0) return <p className="text-gray-500">Нет уроков</p>;
 
   const teacherIds = [...new Set(lessons.map(l => l.teacher))];
 
@@ -108,7 +108,28 @@ const WeekViewByTeacher: React.FC<Props> = ({
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">Расписание по учителям</h2>
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-lg font-semibold mb-4">Расписание по учителям</h2>
+          <button
+            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+            onClick={() => {
+              const newLesson: Lesson = {
+                  id: Date.now(),
+                  grade: '',
+                  subject: '',
+                  teacher: '',
+                  day_of_week: 0,
+                  start_time: '08:00',
+                  duration_minutes: 45,
+              };
+              setSelected(newLesson);
+              setShowModal(true);
+            }}
+          >
+            + Новый урок
+          </button>
+      </div>
+
       {teacherIds.map((teacherId) => {
         const teacherLessons = lessons.filter(l => l.teacher === teacherId);
         const teacherName = teacherLessons[0]?.teacher_name || `Учитель ${teacherId}`;
@@ -167,7 +188,29 @@ const WeekViewByTeacher: React.FC<Props> = ({
 
         return (
           <div key={teacherId} className="mb-8">
-            <h3 className="text-md font-bold mb-2">👩‍🏫 {teacherName}</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-md font-bold mb-2">👩‍🏫 {teacherName}</h3>
+              {source === 'draft' && (
+                <button
+                  className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+                  onClick={() => {
+                    const emptyLesson: Lesson = {
+                      id: Date.now(), // временный ID
+                      grade: '',
+                      subject: '',
+                      teacher: teacherId,
+                      day_of_week: 0,
+                      start_time: '08:00',
+                      duration_minutes: 45,
+                    };
+                    setSelected(emptyLesson);
+                    setShowModal(true);
+                  }}
+                >
+                  + Новый урок
+                </button>
+              )}
+            </div>
             <FullCalendarTemplateView
               events={events}
               editable={source === 'draft'}

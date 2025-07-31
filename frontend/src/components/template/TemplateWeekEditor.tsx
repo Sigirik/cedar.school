@@ -5,11 +5,12 @@ import { Button, Modal, Select, message } from 'antd';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
-import { prepareLessons } from '../../utils/prepareLessons';
+import { prepareLessons, formatTeacher } from '../../utils/prepareLessons';
 
 const TemplateWeekEditor: React.FC = () => {
   const [historicalTemplates, setHistoricalTemplates] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -104,16 +105,32 @@ const TemplateWeekEditor: React.FC = () => {
     );
   };
 
-  const handleLessonSave = async (updated: any) => {
-    const raw = lessons.map(l => (l.id === updated.id ? updated : l));
-    setLessons(raw);
-    try {
-      await patchDraft(raw);
-      message.success('Урок сохранён');
-    } catch {
-      message.error('Не удалось сохранить черновик');
-    }
-  };
+    const enrichLesson = (l: any) => {
+      const teacher = teachers.find(t => t.id === l.teacher);
+      return {
+        ...l,
+        subject_name: subjects.find(s => s.id === l.subject)?.name || '',
+        grade_name: grades.find(g => g.id === l.grade)?.name || '',
+        teacher_name: teacher ? formatTeacher(teacher) : '',
+      };
+    };
+
+    const handleLessonSave = async (updated: any) => {
+      const enriched = enrichLesson(updated);
+      const exists = lessons.some(l => l.id === enriched.id);
+      const raw = exists
+        ? lessons.map(l => (l.id === enriched.id ? enriched : l))
+        : [...lessons, enriched];
+
+      setLessons(raw);
+
+      try {
+        await patchDraft(raw);
+        message.success('Урок сохранён');
+      } catch {
+        message.error('Не удалось сохранить черновик');
+      }
+    };
 
   const handleLessonDelete = async (id: number) => {
     const raw = lessons.filter(l => l.id !== id);
@@ -127,30 +144,49 @@ const TemplateWeekEditor: React.FC = () => {
   };
 
   // --- Опубликовать черновик как активную неделю
-  const handlePublish = async () => {
-    const confirm = window.confirm('Опубликовать этот черновик как новую активную неделю?');
-    if (!confirm) return;
-    try {
-      const csrftoken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
+    const handlePublish = async () => {
+      const confirm = window.confirm('Опубликовать этот черновик как новую активную неделю?');
+      if (!confirm) return;
 
-      await axios.post(
-        '/api/draft/template-drafts/commit/',
-        {},
-        {
-          headers: { 'X-CSRFToken': csrftoken },
-          withCredentials: true,
-        }
-      );
-      message.success('Черновик опубликован.');
-      navigate('/template-week/active');
-    } catch (err) {
-      message.error('Ошибка при публикации.');
-      console.error(err);
-    }
-  };
+      try {
+        const csrftoken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+        // Извлекаем только нужные поля для backend
+        const cleanedLessons = lessons.map((l) => ({
+          id: l.id,
+          grade: l.grade,
+          subject: l.subject,
+          teacher: l.teacher,
+          day_of_week: l.day_of_week,
+          start_time: l.start_time,
+          duration_minutes: l.duration_minutes,
+        }));
+
+        await axios.patch(
+          '/api/draft/template-drafts/update/',
+          { data: { lessons: cleanedLessons } },
+          { headers: { 'X-CSRFToken': csrftoken }, withCredentials: true }
+        );
+
+        await axios.post(
+          '/api/draft/template-drafts/commit/',
+          {},
+          {
+            headers: { 'X-CSRFToken': csrftoken },
+            withCredentials: true,
+          }
+        );
+
+        message.success('Черновик опубликован.');
+        setLessons([]);
+        navigate('/template-week');
+      } catch (err) {
+        message.error('Ошибка при публикации.');
+        console.error(err);
+      }
+    };
 
   // --- Импорт шаблона (из модалки)
   const handleImportTemplate = async () => {
@@ -175,12 +211,30 @@ const TemplateWeekEditor: React.FC = () => {
     }
   };
 
+    const handleCreateEmpty = async () => {
+      const csrftoken = document.cookie
+        .split('; ')
+        .find(r => r.startsWith('csrftoken='))?.split('=')[1];
+      try {
+        await axios.post(
+          '/api/draft/template-drafts/create-empty/',
+          {},
+          { headers: { 'X-CSRFToken': csrftoken }, withCredentials: true }
+        );
+        message.success('Создан пустой шаблон.');
+        window.location.reload();
+      } catch (e) {
+        message.error('Ошибка при создании пустого шаблона');
+      }
+    };
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Редактирование шаблонной недели (черновик)</h2>
 
       <div className="mb-4 space-x-2">
         <Button onClick={() => setIsModalVisible(true)}>Импортировать из другого шаблона</Button>
+        <Button danger onClick={() => setShowEmptyConfirm(true)}>Пустой шаблон</Button>
         <Button type="primary" onClick={handlePublish}>Опубликовать</Button>
       </div>
 
@@ -223,6 +277,19 @@ const TemplateWeekEditor: React.FC = () => {
             </Select.Option>
           ))}
         </Select>
+      </Modal>
+      <Modal
+          title="Создать пустой шаблон?"
+          open={showEmptyConfirm}
+          onOk={handleCreateEmpty}
+          onCancel={() => setShowEmptyConfirm(false)}
+          okText="Продолжить"
+          cancelText="Отмена"
+          okButtonProps={{ danger: true }}
+      >
+          <p className="text-red-600">
+            Все текущие уроки из черновика будут удалены. Вы уверены, что хотите начать с пустого шаблона?
+          </p>
       </Modal>
     </div>
   );
