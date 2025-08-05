@@ -4,7 +4,7 @@
 """
 
 from rest_framework import serializers
-from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear
+from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear, Quarter, Holiday
 from .models import TeacherSubject, TeacherGrade, GradeSubject, StudentSubject
 
 
@@ -39,7 +39,7 @@ class LessonTypeSerializer(serializers.ModelSerializer):
 class AcademicYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicYear
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'start_date', 'end_date']
 
 class GradeSubjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,3 +63,13 @@ class StudentSubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentSubject
         fields = ['id', 'student', 'grade', 'subject']
+
+class QuarterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quarter
+        fields = ['id', 'year', 'name', 'start_date', 'end_date']
+
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Holiday
+        fields = ['id', 'date', 'name', 'type']

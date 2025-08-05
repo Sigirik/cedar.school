@@ -4,9 +4,35 @@ ViewSet'ы для CRUD-операций справочников core через
 """
 
 from rest_framework import viewsets
-from rest_framework.viewsets import ReadOnlyModelViewSet
-from .models import Grade, Subject, TeacherAvailability, WeeklyNorm, LessonType, AcademicYear, GradeSubject, TeacherSubject, TeacherGrade, StudentSubject
-from .serializers import GradeSerializer, SubjectSerializer, TeacherAvailabilitySerializer, WeeklyNormSerializer, LessonTypeSerializer, AcademicYearSerializer, GradeSubjectSerializer, TeacherSubjectSerializer, TeacherGradeSerializer, StudentSubjectSerializer
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from .models import (
+    Grade,
+    Subject,
+    TeacherAvailability,
+    WeeklyNorm,
+    LessonType,
+    AcademicYear,
+    GradeSubject,
+    TeacherSubject,
+    TeacherGrade,
+    StudentSubject,
+    Quarter,
+    Holiday
+)
+from .serializers import (
+    GradeSerializer,
+    SubjectSerializer,
+    TeacherAvailabilitySerializer,
+    WeeklyNormSerializer,
+    LessonTypeSerializer,
+    AcademicYearSerializer,
+    GradeSubjectSerializer,
+    TeacherSubjectSerializer,
+    TeacherGradeSerializer,
+    StudentSubjectSerializer,
+    QuarterSerializer,
+    HolidaySerializer
+)
 
 class GradeViewSet(ReadOnlyModelViewSet):
     queryset = Grade.objects.all()
@@ -28,7 +54,7 @@ class LessonTypeViewSet(ReadOnlyModelViewSet):
     queryset = LessonType.objects.all()
     serializer_class = LessonTypeSerializer
 
-class AcademicYearViewSet(ReadOnlyModelViewSet):
+class AcademicYearViewSet(ModelViewSet):
     queryset = AcademicYear.objects.all()
     serializer_class = AcademicYearSerializer
 
@@ -47,3 +73,11 @@ class TeacherGradeViewSet(viewsets.ModelViewSet):
 class StudentSubjectViewSet(viewsets.ModelViewSet):
     queryset = StudentSubject.objects.select_related('student', 'grade', 'subject').all()
     serializer_class = StudentSubjectSerializer
+
+class QuarterViewSet(viewsets.ModelViewSet):
+    queryset = Quarter.objects.select_related('year').all()
+    serializer_class = QuarterSerializer
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer

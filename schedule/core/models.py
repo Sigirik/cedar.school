@@ -87,6 +87,10 @@ class LessonType(models.Model):
 
 class AcademicYear(models.Model):
     name = models.CharField(max_length=20)
+    is_current = models.BooleanField(default=False)
+
+    start_date = models.DateField()
+    end_date = models.DateField()
 
     class Meta:
         verbose_name = "AcademicYear"
@@ -94,6 +98,30 @@ class AcademicYear(models.Model):
 
     def __str__(self):
         return self.name
+
+class Quarter(models.Model):
+    year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    name = models.CharField(max_length=10)  # I, II, III, IV
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+class Vacation(models.Model):
+    year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE)
+    name = models.CharField()  # Осенние, Зимние...
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+class Holiday(models.Model):
+    date = models.DateField(unique=True)
+    name = models.CharField()
+    type = models.CharField(
+        max_length=20,
+        choices=[
+            ("official", "Официальный выходной"),
+            ("custom", "Особый день"),
+        ],
+        default="official"
+    )
 
 # --- КТО с ЧЕМ связан: все связи расписания ---
 

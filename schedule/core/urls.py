@@ -8,7 +8,8 @@ from .views import (
     GradeViewSet, SubjectViewSet, TeacherAvailabilityViewSet,
     WeeklyNormViewSet, LessonTypeViewSet, AcademicYearViewSet,
     GradeSubjectViewSet, StudentSubjectViewSet,
-    TeacherSubjectViewSet, TeacherGradeViewSet
+    TeacherSubjectViewSet, TeacherGradeViewSet,
+    QuarterViewSet, HolidayViewSet
 )
 
 router = SimpleRouter()
@@ -22,6 +23,8 @@ router.register('grade-subjects', GradeSubjectViewSet)
 router.register('teacher-subjects', TeacherSubjectViewSet)
 router.register('teacher-grades', TeacherGradeViewSet)
 router.register('student-subjects', StudentSubjectViewSet)
+router.register("quarters", QuarterViewSet)
+router.register("holidays", HolidayViewSet)
 
 urlpatterns = router.urls
 
