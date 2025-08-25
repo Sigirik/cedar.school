@@ -10,7 +10,9 @@
 // отдаёт обработчики через пропсы: onEventDrop, onEventResize, onEventClick
 
 import React from 'react';
-import FullCalendar, { EventDropArg, EventResizeDoneArg, EventClickArg } from '@fullcalendar/react';
+import FullCalendar from '@fullcalendar/react';
+import type { EventClickArg } from '@fullcalendar/core';
+import type { EventDropArg, EventResizeDoneArg } from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ruLocale from '@fullcalendar/core/locales/ru';
@@ -28,71 +30,94 @@ interface EventItem {
   extendedProps?: Record<string, any>;
 }
 
-const FullCalendarTemplateView: React.FC<{
+interface Props {
   events: EventItem[];
   height?: string | number;
   editable?: boolean;
   onEventDrop?: (info: EventDropArg) => void;
   onEventResize?: (info: EventResizeDoneArg) => void;
   onEventClick?: (info: EventClickArg) => void;
-}> = ({
+  collisionMap?: Record<string, 'error' | 'warning'>;
+}
+
+const FullCalendarTemplateView: React.FC<Props> = ({
   events,
   height = 'auto',
   editable = true,
   onEventDrop,
   onEventResize,
   onEventClick,
+  collisionMap,
 }) => {
   return (
-    <FullCalendar
-      plugins={[timeGridPlugin, interactionPlugin]}
-      initialView="timeGridWeek"
-      initialDate="2025-07-07"
-      hiddenDays={[6, 0]}
-      allDaySlot={false}
-      slotMinTime="08:00:00"
-      slotMaxTime="17:00:00"
-      slotDuration="00:15:00"
-      slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-      dayHeaderFormat={{ weekday: 'short' }}
-      locale={ruLocale}
-      events={events}
-      editable={editable}
-      droppable={editable}
-      selectable={false}
-      height={height}
-      headerToolbar={false}
-      eventDrop={onEventDrop}
-      eventResize={onEventResize}
-      eventClick={onEventClick}
-      eventDidMount={(info) => {
-      // 12 px — можете изменить на любой
-       (info.el as HTMLElement).style.borderRadius = '12px';
-      }}
-      eventContent={(arg) => {
-        const lines = arg.event.title.split('\n');
-        const time = arg.event.start?.toLocaleTimeString('ru-RU', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        });
+    <>
+      <FullCalendar
+        plugins={[timeGridPlugin, interactionPlugin]}
+        initialView="timeGridWeek"
+        initialDate="2025-07-07"
+        hiddenDays={[6, 0]}
+        allDaySlot={false}
+        slotMinTime="08:00:00"
+        slotMaxTime="17:00:00"
+        slotDuration="00:15:00"
+        slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+        dayHeaderFormat={{ weekday: 'short' }}
+        locales={[ruLocale]}
+        locale="ru"
+        events={events}
+        eventClassNames={(arg) => {
+          const sev = collisionMap?.[arg.event.id];
+          return sev === 'error' ? ['lsn-error']
+               : sev === 'warning' ? ['lsn-warning']
+               : [];
+        }}
+        editable={editable}
+        droppable={editable}
+        selectable={false}
+        height={height}
+        headerToolbar={false}
+        eventDrop={onEventDrop}
+        eventResize={onEventResize}
+        eventClick={onEventClick}
+        eventDidMount={(info) => {
+          (info.el as HTMLElement).style.borderRadius = '12px';
+        }}
+        eventContent={(arg) => {
+          const lines = arg.event.title.split('\n');
+          while (lines.length < 3) lines.push('');
+          const time = arg.event.start?.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+          const durationMin = (arg.event.extendedProps as any)?.durationMin ?? '?';
 
-        const durationMin = arg.event.extendedProps?.durationMin ?? '?';
-
-        return (
-          <div
-            className="text-xs leading-tight px-1 py-0.5 text-gray-900 h-full"
-            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            title={arg.event.title.replaceAll('\n', ' | ')}
-          >
-            <div>{time} · {durationMin} мин</div>
-            <div>{lines[1]}</div>
-            <div>{lines[2]}</div>
-          </div>
-        );
-      }}
-    />
+          return (
+            <div
+              className="text-xs leading-tight px-1 py-0.5 text-gray-900 h-full"
+              style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={arg.event.title.replaceAll('\n', ' | ')}
+            >
+              <div>{time} · {durationMin} мин</div>
+              <div>{lines[1]}</div>
+              <div>{lines[2]}</div>
+            </div>
+          );
+        }}
+      />
+      <style>{`
+        .fc .lsn-error {
+          border: 2px solid #dc2626 !important;
+          background: rgba(220, 38, 38, 0.12) !important;
+        }
+        .fc .lsn-warning {
+          border: 2px solid #ca8a04 !important;
+          background: rgba(202, 138, 4, 0.10) !important;
+        }
+      `}</style>
+    </>
   );
 };
 
 export default FullCalendarTemplateView;
+

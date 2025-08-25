@@ -1,3 +1,4 @@
+// frontend/src/components/calendar/WeekNormSummary.tsx
 // Использует переданный массив lessons
 // Считает нормы отдельно по lesson и course
 // Показывает subject_name, grade_name

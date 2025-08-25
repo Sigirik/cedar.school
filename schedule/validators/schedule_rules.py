@@ -108,3 +108,93 @@ def validate_schedule(lessons: list[dict], weekly_norms: list[dict] = None, chec
                 )
 
     return errors, warnings
+
+
+from collections import defaultdict
+
+def _collect_overlap_ids(items):
+    # items: list[(start_time, end_time, lesson_id)]
+    items = sorted(items, key=lambda x: (x[0], x[1]))
+    n = len(items)
+    pairs = set()
+    for i in range(n):
+        s1, e1, id1 = items[i]
+        # сравниваем со всеми, начинающимися до конца i-го
+        for j in range(i + 1, n):
+            s2, e2, id2 = items[j]
+            if s2 >= e1:
+                break  # дальше все ещё позже
+            pairs.add(tuple(sorted((id1, id2))))
+    # объединяем пары в компоненты
+    g = defaultdict(set)
+    for a, b in pairs:
+        g[a].add(b); g[b].add(a)
+    visited, clusters = set(), []
+    for node in {x for ab in pairs for x in ab}:
+        if node in visited: continue
+        stack, comp = [node], []
+        while stack:
+            v = stack.pop()
+            if v in visited: continue
+            visited.add(v); comp.append(v)
+            stack.extend(g[v] - visited)
+        clusters.append(sorted(comp))
+    return clusters
+
+def check_collisions(lessons: list[dict], include_warnings: bool = True) -> list[dict]:
+    problems: list[dict] = []
+    by_teacher = defaultdict(list)  # (teacher, day) -> [(s,e,id), ...]
+    by_grade = defaultdict(list)
+
+    for l in lessons:
+        lid = l.get("id")
+        teacher = l.get("teacher")
+        grade = l.get("grade")
+        day = l.get("day_of_week")
+        try:
+            s, e = get_lesson_end(l)
+        except Exception:
+            problems.append({
+                "type": "invalid_time",
+                "lesson_ids": [lid] if lid else [],
+                "severity": "error",
+                "message": f"Невалидное время — день {day}, строка '{l.get('start_time')}'"
+            })
+            continue
+
+        if teacher: by_teacher[(teacher, day)].append((s, e, lid))
+        if grade:   by_grade[(grade, day)].append((s, e, lid))
+
+        if include_warnings:
+            missing = [f for f in ("teacher","grade","subject") if not l.get(f)]
+            if missing:
+                problems.append({
+                    "type": "missing_fields",
+                    "lesson_ids": [lid] if lid else [],
+                    "severity": "warning",
+                    "message": "Не заполнены поля: " + ", ".join(missing)
+                })
+
+    for (tid, day), items in by_teacher.items():
+        for cluster in _collect_overlap_ids(items):
+            problems.append({
+                "type": "teacher",
+                "resource_id": tid,
+                "weekday": day,
+                "lesson_ids": cluster,
+                "severity": "error",
+                "message": f"Пересечение по teacher (id={tid}) в день {day}"
+            })
+
+    for (gid, day), items in by_grade.items():
+        for cluster in _collect_overlap_ids(items):
+            problems.append({
+                "type": "grade",
+                "resource_id": gid,
+                "weekday": day,
+                "lesson_ids": cluster,
+                "severity": "error",
+                "message": f"Пересечение по grade (id={gid}) в день {day}"
+            })
+
+    return problems

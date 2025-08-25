@@ -9,7 +9,8 @@ from .views import (
     create_empty_draft,
     update_draft,
     commit_draft,
-    draft_exists
+    draft_exists,
+    validate_draft
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('template-drafts/update/', update_draft, name='update-draft'),  # PATCH
     path('template-drafts/commit/', commit_draft, name='commit-draft'),  # POST
     path('template-drafts/exists/', draft_exists),
+    path('template-drafts/validate/', validate_draft),
 ]

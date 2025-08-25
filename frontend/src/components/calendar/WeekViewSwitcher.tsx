@@ -1,3 +1,4 @@
+//frontend/src/components/calendar/WeekViewSwitcher.tsx
 // Переключает режимы: по классам 🏫, по учителям 👩‍🏫, по нормам 📊
 // Использует lessons, weeklyNorms, переданные из ActiveTemplateWeekView.tsx
 // Компоненты WeekViewByGrade, WeekViewByTeacher, WeekNormSummary, WeekLessonSummaryTable теперь чисто отображающие
@@ -48,16 +49,25 @@ interface WeekViewSwitcherProps {
   gradeSubjects?: { grade: number; subject: number }[];
   teacherSubjects?: { teacher: number; subject: number }[];
   teacherGrades?: { teacher: number; grade: number }[];
+  hasCollisionErrors?: boolean;
+  warningsCount?: number;
+  collisionMap?: Map<number, 'error' | 'warning'>;
 }
+
+const mapToRecord = (m?: Map<number, 'error' | 'warning'>): Record<string, 'error' | 'warning'> => {
+  if (!m) return {};
+  const obj: Record<string, 'error' | 'warning'> = {};
+  m.forEach((v, k) => { obj[String(k)] = v; });
+  return obj;
+};
 
 const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
   lessons, subjects, grades, teachers,
   weeklyNorms, teacherAvailability,
   onLessonSave, onLessonDelete,
-  gradeSubjects,
-  teacherSubjects,
-  teacherGrades,
-  source = 'active'
+  gradeSubjects, teacherSubjects, teacherGrades,
+  source = 'active',
+  hasCollisionErrors, warningsCount, collisionMap,
 }) => {
   const [mode, setMode] = useState<'grade' | 'teacher' | 'summary' | 'norm'>(() => {
     const saved = localStorage.getItem('weekViewMode');
@@ -70,7 +80,7 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
 
   return (
     <div className="mt-6">
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 items-center">
         <button
           className={`px-3 py-1 rounded ${mode === 'grade' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
           onClick={() => setMode('grade')}
@@ -96,6 +106,15 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           📊 По нормам
         </button>
 
+        <div className="ml-auto text-sm">
+          {hasCollisionErrors ? (
+            <span className="px-2 py-0.5 rounded bg-red-100 text-red-700">Коллизии обнаружены</span>
+          ) : warningsCount ? (
+            <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">Предупреждений: {warningsCount}</span>
+          ) : (
+            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Всё чисто</span>
+          )}
+        </div>
       </div>
 
       {mode === 'grade' && (
@@ -113,6 +132,7 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           } : undefined}
           onLessonSave={onLessonSave!}
           onLessonDelete={onLessonDelete!}
+          collisionMap={mapToRecord(collisionMap)}
         />
       )}
       {mode === 'teacher' && (
@@ -130,6 +150,7 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           } : undefined}
           onLessonSave={onLessonSave!}
           onLessonDelete={onLessonDelete!}
+          collisionMap={mapToRecord(collisionMap)}
         />
       )}
       {mode === 'norm' && <WeekNormSummary lessons={lessons} weeklyNorms={weeklyNorms} />}
@@ -146,6 +167,7 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
           } : undefined}
           onLessonSave={onLessonSave!}
           onLessonDelete={onLessonDelete!}
+          collisionMap={mapToRecord(collisionMap)}
         />
       )}
     </div>

@@ -1,9 +1,11 @@
+// frontend/src/main.tsx
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import AppRouter from './AppRouter';
 import axios from "axios";
-import LoginForm from './components/auth/LoginForm';
+import { AuthProvider } from "@/hooks/AuthContext";
+
 
 // ✅ Настройка глобального axios для работы с Session + CSRF
 axios.defaults.withCredentials = true;
@@ -12,8 +14,8 @@ axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <LoginForm>
+    <AuthProvider>
       <AppRouter />
-    </LoginForm>
+    </AuthProvider>
   </StrictMode>,
 );

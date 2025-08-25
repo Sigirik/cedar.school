@@ -1,4 +1,5 @@
 """
+schedule/draft/views.py
 Функции для управления единственным активным черновиком недели (универсально и прозрачно).
 """
 from django.utils.timezone import now
@@ -7,9 +8,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import TemplateWeekDraft
 from .serializers import TemplateWeekDraftSerializer
-from schedule.core.models import AcademicYear
+from schedule.core.models import AcademicYear, LessonType
 from schedule.template.models import TemplateWeek, TemplateLesson
 from django.shortcuts import get_object_or_404
+from schedule.validators.schedule_rules import check_collisions
 from rest_framework import status
 
 @api_view(['GET'])
@@ -47,7 +49,7 @@ def create_draft_from_template(request):
             "grade": l.grade_id,
             "teacher": l.teacher_id,
             "day_of_week": l.day_of_week,
-            "start_time": str(l.start_time),
+            "start_time": l.start_time.strftime("%H:%M") if l.start_time else None,
             "duration_minutes": l.duration_minutes,
             "type": l.type.key if l.type else None
         }
@@ -98,7 +100,7 @@ def commit_draft(request):
     Применить черновик (публикация как новой активной недели, сброс черновика).
     """
     draft = get_object_or_404(TemplateWeekDraft, user=request.user)
-    lessons = draft.data.get("lessons", [])
+    lessons = (draft.data or {}).get("lessons", [])
 
     # Деактивируем все недели
     TemplateWeek.objects.filter(is_active=True).update(is_active=False)
@@ -110,7 +112,18 @@ def commit_draft(request):
         description="Опубликовано пользователем {}".format(request.user.username)
     )
     print("🔥 COMMIT LESSONS:", lessons)
+
     for l in lessons:
+        # Определяем type_id: сначала берем явный, иначе ищем по ключу
+        type_id = l.get("type_id")
+        if not type_id:
+            type_key = l.get("type")
+            if type_key:
+                try:
+                    type_id = LessonType.objects.only("id").get(key=type_key).id
+                except LessonType.DoesNotExist:
+                    type_id = None  # оставим пустым, если указан неизвестный ключ
+
         TemplateLesson.objects.create(
             template_week=week,
             grade_id=l["grade"],
@@ -119,8 +132,9 @@ def commit_draft(request):
             day_of_week=l["day_of_week"],
             start_time=l["start_time"],
             duration_minutes=l["duration_minutes"],
-            type_id=None  # Если нужно искать type по key — доработай
+            type_id=type_id  # теперь сохраняем тип, если удалось определить
         )
+
     # Сброс черновика
     draft.data = {"lessons": []}
     draft.change_history = []
@@ -132,3 +146,19 @@ def commit_draft(request):
 def draft_exists(request):
     exists = TemplateWeekDraft.objects.filter(user=request.user).exists()
     return Response({ "exists": exists })
+
+# вернёт {lessons, collisions} без коммита.
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def validate_draft(request):
+    """
+    Проверка коллизий без коммита. Возвращает уроки + список проблем.
+    """
+    draft = get_object_or_404(TemplateWeekDraft, user=request.user)
+    lessons = (draft.data or {}).get("lessons", [])
+    collisions = check_collisions(lessons)
+
+    return Response({
+        "lessons": lessons,       # фронт уже умеет готовить их к UI
+        "collisions": collisions  # [{ type, resource_id?, weekday?, lesson_ids, severity, message }]
+    }, status=status.HTTP_200_OK)

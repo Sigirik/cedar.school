@@ -1,3 +1,4 @@
+// frontend/src/components/calendar/WeekViewByTeacher.tsx
 import React, { useState } from 'react';
 import { message } from 'antd';
 import FullCalendarTemplateView from './FullCalendarTemplateView';
@@ -38,6 +39,7 @@ interface Props {
   onLessonModalProps?: any;
   onLessonSave?: (l: Lesson) => void;
   onLessonDelete?: (id: number) => void;
+  collisionMap?: Record<string, 'error' | 'warning'>;
 }
 
 const weekdayMap = [
@@ -80,6 +82,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
   onLessonModalProps = {},
   onLessonSave,
   onLessonDelete,
+  collisionMap,
 }) => {
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -113,15 +116,18 @@ const WeekViewByTeacher: React.FC<Props> = ({
           <button
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
-              const newLesson: Lesson = {
-                  id: Date.now(),
-                  grade: '',
-                  subject: '',
-                  teacher: '',
-                  day_of_week: 0,
-                  start_time: '08:00',
-                  duration_minutes: 45,
-              };
+             const newLesson: Lesson = {
+               id: Date.now(),
+               grade: 0 as unknown as number,
+               subject: 0 as unknown as number,
+               teacher: 0 as unknown as number,
+               day_of_week: 0,
+               start_time: '08:00',
+               duration_minutes: 45,
+               subject_name: '',
+               grade_name: '',
+               teacher_name: '',
+             };
               setSelected(newLesson);
               setShowModal(true);
             }}
@@ -194,25 +200,29 @@ const WeekViewByTeacher: React.FC<Props> = ({
                 <button
                   className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
                   onClick={() => {
-                    const emptyLesson: Lesson = {
-                      id: Date.now(), // временный ID
-                      grade: '',
-                      subject: '',
-                      teacher: teacherId,
-                      day_of_week: 0,
-                      start_time: '08:00',
-                      duration_minutes: 45,
-                    };
-                    setSelected(emptyLesson);
-                    setShowModal(true);
-                  }}
-                >
-                  + Новый урок
+                     const emptyLesson: Lesson = {
+                       id: Date.now(),
+                       grade: 0 as unknown as number,
+                       subject: 0 as unknown as number,
+                       teacher: teacherId,
+                       day_of_week: 0,
+                       start_time: '08:00',
+                       duration_minutes: 45,
+                       subject_name: '',
+                      grade_name: '',
+                       teacher_name: '',
+                     };
+                     setSelected(emptyLesson);
+                     setShowModal(true);
+                                   }}
+                                  >
+                                    + Новый урок
                 </button>
               )}
             </div>
             <FullCalendarTemplateView
               events={events}
+              collisionMap={collisionMap}
               editable={source === 'draft'}
               onEventClick={(info) => {
                 if (source !== 'draft') return;
@@ -229,12 +239,10 @@ const WeekViewByTeacher: React.FC<Props> = ({
                 if (!src) return;
                 const updated = rebuildLesson(info, src);
 
-                  // Проверки!
-                    const { errors, warnings } = validateLesson(
-                        toPlainLesson(updated),
-                        checkLessons,
-                        checkAvailability
-                    );
+                 // Проверки (с исключением текущего урока)
+                 const base = checkLessons.filter(x => x.id !== src.id);
+                 const { errors, warnings } = validateLesson(toPlainLesson(updated), base, checkAvailability);
+
                   if (errors.length) {
                     message.error(errors.join('\n'));
                     // ОТМЕНИТЬ drag-n-drop — вернём событие на старое место:
@@ -255,11 +263,9 @@ const WeekViewByTeacher: React.FC<Props> = ({
                 const updated = rebuildLesson(info, src);
 
                   // Проверки!
-                  const { errors, warnings } = validateLesson(
-                        toPlainLesson(updated),
-                        checkLessons,
-                        checkAvailability
-                  );
+                    const base = checkLessons.filter(x => x.id !== src.id);
+                    const { errors, warnings } = validateLesson(toPlainLesson(updated), base, checkAvailability);
+
                   if (errors.length) {
                     message.error(errors.join('\n'));
                     info.revert();

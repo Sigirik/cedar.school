@@ -1,7 +1,9 @@
+// frontend/src/components/calendar/WeekLessonSummaryTable.tsx
 import React, { useState } from 'react';
 import LessonEditorModal from './LessonEditorModal';
 
 interface Lesson {
+  id: number;
   subject: number;
   subject_name: string;
   grade: number;
@@ -36,6 +38,8 @@ interface Props {
   onLessonModalProps?: any;
   onLessonSave?: (l: Lesson) => void;
   onLessonDelete?: (id: number) => void;
+  /** для подсветки в календарном варианте, если добавите */
+  collisionMap?: Record<string, 'error' | 'warning'>;
 }
 
 const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
@@ -118,13 +122,16 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
               const newLesson: Lesson = {
-                  id: Date.now(),
-                  grade: '',
-                  subject: '',
-                  teacher: '',
-                  day_of_week: 0,
-                  start_time: '08:00',
-                  duration_minutes: 45,
+                id: Date.now(),
+                grade: 0 as unknown as number,   // заполните корректным классом в модалке
+                subject: 0 as unknown as number, // idem
+                teacher: 0 as unknown as number, // idem
+                day_of_week: 0,
+                start_time: '08:00',
+                duration_minutes: 45,
+                subject_name: '',
+                grade_name: '',
+                teacher_name: '',
               };
               setSelected(newLesson);
               setShowModal(true);
@@ -179,15 +186,18 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
           <button
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
-              const emptyLesson: Lesson = {
-                  id: Date.now(),
-                  grade: '',
-                  subject: '',
-                  teacher: '',
-                  day_of_week: 0,
-                  start_time: '08:00',
-                  duration_minutes: 45,
-              };
+             const emptyLesson: Lesson = {
+               id: Date.now(),
+               grade: 0 as unknown as number,
+               subject: 0 as unknown as number,
+               teacher: 0 as unknown as number,
+               day_of_week: 0,
+               start_time: '08:00',
+               duration_minutes: 45,
+               subject_name: '',
+               grade_name: '',
+               teacher_name: '',
+             };
               setSelected(emptyLesson);
               setShowModal(true);
             }}
@@ -206,8 +216,8 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
           teacherAvailability={teacherAvailability}
           {...(onLessonModalProps || {})}
           onClose={() => setShowModal(false)}
-          onSave={(l) => { onLessonSave(l); setShowModal(false); }}
-          onDelete={(id) => { onLessonDelete(id); setShowModal(false); }}
+          onSave={(l) => { onLessonSave?.(l as any); setShowModal(false); }}
+          onDelete={(id) => { onLessonDelete?.(id as any); setShowModal(false); }}
         />
       )}
     </div>
