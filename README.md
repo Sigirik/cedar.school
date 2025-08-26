@@ -82,3 +82,32 @@ Cedar.school — современная система для планирова
 - Пример запуска management-команды:
   ```sh
   python manage.py fill_template_week
+
+# Первый старт (dev)
+docker compose up --build
+
+- Бэкенд автоматически прогонит миграции.
+- Если в БД нет данных, он загрузит seed/dev_seed.json.
+- Повторные запуски сид не перезаливают.
+
+Ручные команды:
+docker compose exec backend python manage.py loaddata seed/dev_seed.json
+docker compose exec backend python manage.py migrate
+
+Мини-шпаргалка по командам docker
+
+Запуск:
+docker compose up -d
+
+Логи бэка:
+docker compose logs -f web
+
+Одноразовые Django-команды (внутри запущенного сервиса):
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+
+Пересобрать (если поменялся requirements.txt):
+docker compose up -d --build
+
+Остановить:
+docker compose down

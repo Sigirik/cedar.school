@@ -5,7 +5,6 @@ services:
   db:
     image: postgres:16-alpine
     env_file: .env
-    # Postgres читает переменные POSTGRES_*
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cedar}
       POSTGRES_USER: ${POSTGRES_USER:-cedar}
@@ -21,23 +20,23 @@ services:
       retries: 10
       start_period: 5s
 
-  web:
-    build: .
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     env_file: .env
     working_dir: /app
     volumes:
-      - ./:/app
+      - ./backend:/app         # код + seed + scripts
+      # если хочешь фиксировать один и тот же sqlite-файл у всех — добавь:
+      # - ./backend/db.sqlite3:/app/db.sqlite3
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    # При старте: миграции + dev-сервер
-    command: >
-      sh -c "
-        python manage.py migrate &&
-        python manage.py runserver 0.0.0.0:8000
-      "
+    # команду не указываем — запуск делает CMD в Dockerfile (entrypoint.sh)
 
 volumes:
   pgdata:
+
