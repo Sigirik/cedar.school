@@ -1,0 +1,1415 @@
+[
+{
+  "model": "users.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$2KcFAMdyKjDAJJfpwccpBy$rLihQUK0WaRiE/KR8UfAM9NZWsAGOKpTwSCdg7WZxvY=",
+    "last_login": "2025-08-25T15:51:57.293Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "Админ",
+    "last_name": "",
+    "email": "sabynichov@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2025-07-27T19:51:16Z",
+    "role": "ADMIN",
+    "middle_name": "",
+    "individual_subjects_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$RRr3KuHghndb6XgIPpZ0uV$MsVL6zTnHMJPEbgVLE0U9Ycpa/gemSVtIutlk1Z75lM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "gumanitarij",
+    "first_name": "Историк",
+    "last_name": "Гуманитарий",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-07-27T22:19:57Z",
+    "role": "TEACHER",
+    "middle_name": "Языкович",
+    "individual_subjects_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$kcL1iwwa0LlcVKsF0fn5dj$sYoI7+w4kRn3/UcGVYt+KlkYFOXAJI5PAtHefqE1mIw=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "tehnar",
+    "first_name": "Математик",
+    "last_name": "Технарь",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-07-27T22:19:58Z",
+    "role": "TEACHER",
+    "middle_name": "Физикович",
+    "individual_subjects_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$a2yVUxnnRqs4gEllgvrmiP$LuXTboXexUVLE3Uwzc1mlSpDSW9nKKgv8yyqCr3doLY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "Student",
+    "first_name": "Ученик",
+    "last_name": "Студентович",
+    "email": "berspam@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-08-06T14:51:00Z",
+    "role": "STUDENT",
+    "middle_name": "",
+    "individual_subjects_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$ivz1gWF8rwf9pkDqxVr9hg$0vU6hSeqMZUm7t2oOScm0sle48Hy3Tja6QEtmk5Vf8s=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "Teacher",
+    "first_name": "Учитель",
+    "last_name": "Преподавателев",
+    "email": "zaripov@cedar.school",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-08-14T12:56:50Z",
+    "role": "STUDENT",
+    "middle_name": "",
+    "individual_subjects_enabled": false,
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "core.grade",
+  "pk": 1,
+  "fields": {
+    "name": "4А"
+  }
+},
+{
+  "model": "core.grade",
+  "pk": 2,
+  "fields": {
+    "name": "5А"
+  }
+},
+{
+  "model": "core.grade",
+  "pk": 3,
+  "fields": {
+    "name": "6А"
+  }
+},
+{
+  "model": "core.subject",
+  "pk": 1,
+  "fields": {
+    "name": "История"
+  }
+},
+{
+  "model": "core.subject",
+  "pk": 2,
+  "fields": {
+    "name": "Русский язык"
+  }
+},
+{
+  "model": "core.subject",
+  "pk": 3,
+  "fields": {
+    "name": "Математика"
+  }
+},
+{
+  "model": "core.subject",
+  "pk": 4,
+  "fields": {
+    "name": "Информатика"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 1,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "08:00:00",
+    "end_time": "12:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 2,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "10:00:00",
+    "end_time": "13:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 3,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 1,
+    "start_time": "08:00:00",
+    "end_time": "15:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 4,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 1,
+    "start_time": "10:00:00",
+    "end_time": "13:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 5,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 2,
+    "start_time": "08:00:00",
+    "end_time": "12:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 6,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 2,
+    "start_time": "10:00:00",
+    "end_time": "13:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 7,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 3,
+    "start_time": "08:00:00",
+    "end_time": "12:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 8,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 3,
+    "start_time": "10:00:00",
+    "end_time": "13:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 9,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 4,
+    "start_time": "08:00:00",
+    "end_time": "12:00:00"
+  }
+},
+{
+  "model": "core.teacheravailability",
+  "pk": 10,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 4,
+    "start_time": "10:00:00",
+    "end_time": "13:00:00"
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 1,
+  "fields": {
+    "grade": 1,
+    "subject": 1,
+    "lessons_per_week": 3,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 2,
+  "fields": {
+    "grade": 1,
+    "subject": 2,
+    "lessons_per_week": 5,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 3,
+  "fields": {
+    "grade": 2,
+    "subject": 1,
+    "lessons_per_week": 3,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 4,
+  "fields": {
+    "grade": 2,
+    "subject": 2,
+    "lessons_per_week": 5,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 5,
+  "fields": {
+    "grade": 2,
+    "subject": 3,
+    "lessons_per_week": 5,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 6,
+  "fields": {
+    "grade": 2,
+    "subject": 4,
+    "lessons_per_week": 3,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 7,
+  "fields": {
+    "grade": 3,
+    "subject": 3,
+    "lessons_per_week": 5,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.weeklynorm",
+  "pk": 8,
+  "fields": {
+    "grade": 3,
+    "subject": 4,
+    "lessons_per_week": 3,
+    "courses_per_week": 0
+  }
+},
+{
+  "model": "core.lessontype",
+  "pk": 1,
+  "fields": {
+    "key": "lesson",
+    "label": "Урок",
+    "counts_towards_norm": true
+  }
+},
+{
+  "model": "core.lessontype",
+  "pk": 2,
+  "fields": {
+    "key": "course",
+    "label": "Курс",
+    "counts_towards_norm": true
+  }
+},
+{
+  "model": "core.academicyear",
+  "pk": 1,
+  "fields": {
+    "name": "2025-2026",
+    "is_current": true,
+    "start_date": "2005-09-01",
+    "end_date": "2026-06-01"
+  }
+},
+{
+  "model": "core.quarter",
+  "pk": 1,
+  "fields": {
+    "year": 1,
+    "name": "I",
+    "start_date": "2025-09-02",
+    "end_date": "2025-10-31"
+  }
+},
+{
+  "model": "core.quarter",
+  "pk": 2,
+  "fields": {
+    "year": 1,
+    "name": "IV",
+    "start_date": "2026-05-05",
+    "end_date": "2026-05-05"
+  }
+},
+{
+  "model": "core.teachersubject",
+  "pk": 1,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "subject": 1
+  }
+},
+{
+  "model": "core.teachersubject",
+  "pk": 2,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "subject": 2
+  }
+},
+{
+  "model": "core.teachersubject",
+  "pk": 3,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "subject": 3
+  }
+},
+{
+  "model": "core.teachersubject",
+  "pk": 4,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "subject": 4
+  }
+},
+{
+  "model": "core.teachergrade",
+  "pk": 1,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "grade": 1
+  }
+},
+{
+  "model": "core.teachergrade",
+  "pk": 2,
+  "fields": {
+    "teacher": [
+      "gumanitarij"
+    ],
+    "grade": 2
+  }
+},
+{
+  "model": "core.teachergrade",
+  "pk": 3,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "grade": 2
+  }
+},
+{
+  "model": "core.teachergrade",
+  "pk": 4,
+  "fields": {
+    "teacher": [
+      "tehnar"
+    ],
+    "grade": 3
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 1,
+  "fields": {
+    "grade": 3,
+    "subject": 3
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 2,
+  "fields": {
+    "grade": 3,
+    "subject": 4
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 3,
+  "fields": {
+    "grade": 1,
+    "subject": 1
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 4,
+  "fields": {
+    "grade": 1,
+    "subject": 2
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 5,
+  "fields": {
+    "grade": 1,
+    "subject": 3
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 6,
+  "fields": {
+    "grade": 2,
+    "subject": 1
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 7,
+  "fields": {
+    "grade": 2,
+    "subject": 2
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 8,
+  "fields": {
+    "grade": 2,
+    "subject": 3
+  }
+},
+{
+  "model": "core.gradesubject",
+  "pk": 9,
+  "fields": {
+    "grade": 2,
+    "subject": 4
+  }
+},
+{
+  "model": "template.templateweek",
+  "pk": 1,
+  "fields": {
+    "name": "Шаблонная неделя №1",
+    "academic_year": 1,
+    "is_active": false,
+    "created_at": "2025-07-27T22:33:10.426Z",
+    "description": ""
+  }
+},
+{
+  "model": "template.templateweek",
+  "pk": 2,
+  "fields": {
+    "name": "Опубликовано из черновика",
+    "academic_year": 1,
+    "is_active": false,
+    "created_at": "2025-07-29T17:56:14.231Z",
+    "description": "Опубликовано пользователем admin"
+  }
+},
+{
+  "model": "template.templateweek",
+  "pk": 3,
+  "fields": {
+    "name": "Шаблон от 2025-07-30",
+    "academic_year": 1,
+    "is_active": false,
+    "created_at": "2025-07-30T13:05:22.399Z",
+    "description": "Опубликовано пользователем admin"
+  }
+},
+{
+  "model": "template.templateweek",
+  "pk": 4,
+  "fields": {
+    "name": "Шаблон от 2025-07-30",
+    "academic_year": 1,
+    "is_active": false,
+    "created_at": "2025-07-30T14:32:15.004Z",
+    "description": "Опубликовано пользователем admin"
+  }
+},
+{
+  "model": "template.templateweek",
+  "pk": 5,
+  "fields": {
+    "name": "Шаблон от 2025-07-30",
+    "academic_year": 1,
+    "is_active": true,
+    "created_at": "2025-07-30T16:09:32.268Z",
+    "description": "Опубликовано пользователем admin"
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 1,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "08:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 2,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 1,
+    "start_time": "08:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 3,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 2,
+    "start_time": "08:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 4,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 1,
+    "start_time": "08:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 5,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 2,
+    "start_time": "08:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 6,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 3,
+    "start_time": "08:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 7,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 4,
+    "start_time": "08:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 8,
+  "fields": {
+    "template_week": 1,
+    "grade": 1,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "08:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 9,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 2,
+    "start_time": "09:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 10,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 3,
+    "start_time": "08:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 11,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 4,
+    "start_time": "08:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 12,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 1,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "09:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 13,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 3,
+    "start_time": "09:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 14,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 4,
+    "start_time": "09:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 15,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "10:15:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 16,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 1,
+    "start_time": "09:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 17,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 4,
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 18,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 19,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 1,
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 20,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 2,
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 21,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 3,
+    "start_time": "10:00:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 22,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "10:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 23,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 1,
+    "start_time": "10:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 24,
+  "fields": {
+    "template_week": 1,
+    "grade": 2,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 2,
+    "start_time": "10:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 25,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 1,
+    "start_time": "11:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 26,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 2,
+    "start_time": "11:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 27,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 3,
+    "start_time": "10:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 28,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 4,
+    "start_time": "10:45:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 29,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "11:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 30,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 3,
+    "start_time": "11:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 31,
+  "fields": {
+    "template_week": 1,
+    "grade": 3,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 4,
+    "start_time": "11:30:00",
+    "duration_minutes": 45,
+    "type": 1
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 32,
+  "fields": {
+    "template_week": 4,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 0,
+    "start_time": "09:00:00",
+    "duration_minutes": 45,
+    "type": null
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 33,
+  "fields": {
+    "template_week": 5,
+    "grade": 2,
+    "subject": 2,
+    "teacher": [
+      "gumanitarij"
+    ],
+    "day_of_week": 2,
+    "start_time": "09:45:00",
+    "duration_minutes": 45,
+    "type": null
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 34,
+  "fields": {
+    "template_week": 5,
+    "grade": 3,
+    "subject": 4,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "08:30:00",
+    "duration_minutes": 45,
+    "type": null
+  }
+},
+{
+  "model": "template.templatelesson",
+  "pk": 35,
+  "fields": {
+    "template_week": 5,
+    "grade": 2,
+    "subject": 3,
+    "teacher": [
+      "tehnar"
+    ],
+    "day_of_week": 0,
+    "start_time": "09:45:00",
+    "duration_minutes": 45,
+    "type": null
+  }
+},
+{
+  "model": "template.activetemplateweek",
+  "pk": 1,
+  "fields": {
+    "template": 1,
+    "activated_at": "2025-07-27T22:33:10.431Z"
+  }
+},
+{
+  "model": "draft.templateweekdraft",
+  "pk": 15,
+  "fields": {
+    "user": [
+      "admin"
+    ],
+    "base_week": 4,
+    "data": {
+      "lessons": []
+    },
+    "change_history": [],
+    "updated_at": "2025-07-30T16:09:32.289Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 1,
+  "fields": {
+    "last_template_week_used": 1,
+    "subject": 3,
+    "grade": 2,
+    "academic_year": 1,
+    "name": "Математика 5А",
+    "created_at": "2025-07-30T17:13:15.928Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 2,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 2,
+    "grade": 2,
+    "academic_year": 1,
+    "name": "Русский язык 5А",
+    "created_at": "2025-07-30T17:14:52.117Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 3,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 3,
+    "grade": 3,
+    "academic_year": 1,
+    "name": "КТП по Математика 6А",
+    "created_at": "2025-08-04T08:08:24.599Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 4,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 4,
+    "grade": 3,
+    "academic_year": 1,
+    "name": "КТП по Информатика 6А",
+    "created_at": "2025-08-04T08:08:24.606Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 5,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 1,
+    "grade": 1,
+    "academic_year": 1,
+    "name": "КТП по История 4А",
+    "created_at": "2025-08-04T08:08:24.610Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 6,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 2,
+    "grade": 1,
+    "academic_year": 1,
+    "name": "КТП по Русский язык 4А",
+    "created_at": "2025-08-04T08:08:24.614Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 7,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 3,
+    "grade": 1,
+    "academic_year": 1,
+    "name": "КТП по Математика 4А",
+    "created_at": "2025-08-04T08:08:24.618Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 8,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 1,
+    "grade": 2,
+    "academic_year": 1,
+    "name": "КТП по История 5А",
+    "created_at": "2025-08-04T08:08:24.622Z"
+  }
+},
+{
+  "model": "ktp.ktptemplate",
+  "pk": 9,
+  "fields": {
+    "last_template_week_used": null,
+    "subject": 4,
+    "grade": 2,
+    "academic_year": 1,
+    "name": "КТП по Информатика 5А",
+    "created_at": "2025-08-04T08:08:24.627Z"
+  }
+},
+{
+  "model": "ktp.ktpsection",
+  "pk": 1,
+  "fields": {
+    "ktp_template": 1,
+    "title": "Пропорции",
+    "description": "",
+    "order": 1,
+    "hours": 0,
+    "created_at": "2025-07-30T17:13:38.811Z",
+    "updated_at": "2025-08-01T10:20:32.242Z"
+  }
+},
+{
+  "model": "ktp.ktpsection",
+  "pk": 2,
+  "fields": {
+    "ktp_template": 1,
+    "title": "Дроби",
+    "description": "",
+    "order": 0,
+    "hours": 0,
+    "created_at": "2025-07-30T17:13:54.908Z",
+    "updated_at": "2025-08-01T10:20:32.252Z"
+  }
+},
+{
+  "model": "ktp.ktpsection",
+  "pk": 3,
+  "fields": {
+    "ktp_template": 2,
+    "title": "Подлежащее",
+    "description": "",
+    "order": 1,
+    "hours": 0,
+    "created_at": "2025-07-30T17:15:16.978Z",
+    "updated_at": "2025-07-30T17:15:16.978Z"
+  }
+},
+{
+  "model": "ktp.ktpsection",
+  "pk": 4,
+  "fields": {
+    "ktp_template": 1,
+    "title": "Задачи",
+    "description": "",
+    "order": 2,
+    "hours": 0,
+    "created_at": "2025-08-01T10:21:31.256Z",
+    "updated_at": "2025-08-01T10:21:31.256Z"
+  }
+},
+{
+  "model": "ktp.ktpentry",
+  "pk": 2,
+  "fields": {
+    "section": 1,
+    "lesson_number": 1,
+    "type": "lesson",
+    "planned_date": null,
+    "actual_date": null,
+    "title": "Обратная пропорциональная зависимость",
+    "objectives": "1.",
+    "tasks": "2.",
+    "homework": "3.",
+    "materials": "для урока для урока",
+    "planned_outcomes": "5.",
+    "motivation": "6.",
+    "order": 1,
+    "template_lesson": null,
+    "created_at": "2025-07-30T17:16:50.706Z",
+    "updated_at": "2025-08-01T08:19:26.085Z"
+  }
+},
+{
+  "model": "ktp.ktpentry",
+  "pk": 3,
+  "fields": {
+    "section": 2,
+    "lesson_number": 1,
+    "type": "lesson",
+    "planned_date": null,
+    "actual_date": null,
+    "title": "Обыкновенные",
+    "objectives": "",
+    "tasks": "",
+    "homework": "",
+    "materials": "по русскому",
+    "planned_outcomes": "",
+    "motivation": "",
+    "order": 1,
+    "template_lesson": null,
+    "created_at": "2025-07-30T17:17:17.017Z",
+    "updated_at": "2025-08-01T08:19:26.086Z"
+  }
+},
+{
+  "model": "ktp.ktpentry",
+  "pk": 4,
+  "fields": {
+    "section": 2,
+    "lesson_number": 1,
+    "type": "lesson",
+    "planned_date": null,
+    "actual_date": null,
+    "title": "Второй урок",
+    "objectives": null,
+    "tasks": null,
+    "homework": null,
+    "materials": null,
+    "planned_outcomes": null,
+    "motivation": null,
+    "order": 2,
+    "template_lesson": null,
+    "created_at": "2025-08-01T10:45:13.407Z",
+    "updated_at": "2025-08-01T10:45:24.012Z"
+  }
+}
+]
