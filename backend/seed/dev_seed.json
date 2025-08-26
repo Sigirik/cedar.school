@@ -6,7 +6,7 @@
     "last_login": "2025-08-25T15:51:57.293Z",
     "is_superuser": true,
     "username": "admin",
-    "first_name": "Админ",
+    "first_name": "РђРґРјРёРЅ",
     "last_name": "",
     "email": "sabynichov@gmail.com",
     "is_staff": true,
@@ -26,14 +26,14 @@
     "last_login": null,
     "is_superuser": false,
     "username": "gumanitarij",
-    "first_name": "Историк",
-    "last_name": "Гуманитарий",
+    "first_name": "РСЃС‚РѕСЂРёРє",
+    "last_name": "Р“СѓРјР°РЅРёС‚Р°СЂРёР№",
     "email": "",
     "is_staff": false,
     "is_active": true,
     "date_joined": "2025-07-27T22:19:57Z",
     "role": "TEACHER",
-    "middle_name": "Языкович",
+    "middle_name": "РЇР·С‹РєРѕРІРёС‡",
     "individual_subjects_enabled": false,
     "groups": [],
     "user_permissions": []
@@ -46,14 +46,14 @@
     "last_login": null,
     "is_superuser": false,
     "username": "tehnar",
-    "first_name": "Математик",
-    "last_name": "Технарь",
+    "first_name": "РњР°С‚РµРјР°С‚РёРє",
+    "last_name": "РўРµС…РЅР°СЂСЊ",
     "email": "",
     "is_staff": false,
     "is_active": true,
     "date_joined": "2025-07-27T22:19:58Z",
     "role": "TEACHER",
-    "middle_name": "Физикович",
+    "middle_name": "Р¤РёР·РёРєРѕРІРёС‡",
     "individual_subjects_enabled": false,
     "groups": [],
     "user_permissions": []
@@ -66,8 +66,8 @@
     "last_login": null,
     "is_superuser": false,
     "username": "Student",
-    "first_name": "Ученик",
-    "last_name": "Студентович",
+    "first_name": "РЈС‡РµРЅРёРє",
+    "last_name": "РЎС‚СѓРґРµРЅС‚РѕРІРёС‡",
     "email": "berspam@gmail.com",
     "is_staff": false,
     "is_active": true,
@@ -86,8 +86,8 @@
     "last_login": null,
     "is_superuser": false,
     "username": "Teacher",
-    "first_name": "Учитель",
-    "last_name": "Преподавателев",
+    "first_name": "РЈС‡РёС‚РµР»СЊ",
+    "last_name": "РџСЂРµРїРѕРґР°РІР°С‚РµР»РµРІ",
     "email": "zaripov@cedar.school",
     "is_staff": false,
     "is_active": true,
@@ -103,49 +103,49 @@
   "model": "core.grade",
   "pk": 1,
   "fields": {
-    "name": "4А"
+    "name": "4Рђ"
   }
 },
 {
   "model": "core.grade",
   "pk": 2,
   "fields": {
-    "name": "5А"
+    "name": "5Рђ"
   }
 },
 {
   "model": "core.grade",
   "pk": 3,
   "fields": {
-    "name": "6А"
+    "name": "6Рђ"
   }
 },
 {
   "model": "core.subject",
   "pk": 1,
   "fields": {
-    "name": "История"
+    "name": "РСЃС‚РѕСЂРёСЏ"
   }
 },
 {
   "model": "core.subject",
   "pk": 2,
   "fields": {
-    "name": "Русский язык"
+    "name": "Р СѓСЃСЃРєРёР№ СЏР·С‹Рє"
   }
 },
 {
   "model": "core.subject",
   "pk": 3,
   "fields": {
-    "name": "Математика"
+    "name": "РњР°С‚РµРјР°С‚РёРєР°"
   }
 },
 {
   "model": "core.subject",
   "pk": 4,
   "fields": {
-    "name": "Информатика"
+    "name": "РРЅС„РѕСЂРјР°С‚РёРєР°"
   }
 },
 {
@@ -353,7 +353,7 @@
   "pk": 1,
   "fields": {
     "key": "lesson",
-    "label": "Урок",
+    "label": "РЈСЂРѕРє",
     "counts_towards_norm": true
   }
 },
@@ -362,7 +362,7 @@
   "pk": 2,
   "fields": {
     "key": "course",
-    "label": "Курс",
+    "label": "РљСѓСЂСЃ",
     "counts_towards_norm": true
   }
 },
@@ -552,7 +552,7 @@
   "model": "template.templateweek",
   "pk": 1,
   "fields": {
-    "name": "Шаблонная неделя №1",
+    "name": "РЁР°Р±Р»РѕРЅРЅР°СЏ РЅРµРґРµР»СЏ в„–1",
     "academic_year": 1,
     "is_active": false,
     "created_at": "2025-07-27T22:33:10.426Z",
@@ -563,44 +563,44 @@
   "model": "template.templateweek",
   "pk": 2,
   "fields": {
-    "name": "Опубликовано из черновика",
+    "name": "РћРїСѓР±Р»РёРєРѕРІР°РЅРѕ РёР· С‡РµСЂРЅРѕРІРёРєР°",
     "academic_year": 1,
     "is_active": false,
     "created_at": "2025-07-29T17:56:14.231Z",
-    "description": "Опубликовано пользователем admin"
+    "description": "РћРїСѓР±Р»РёРєРѕРІР°РЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј admin"
   }
 },
 {
   "model": "template.templateweek",
   "pk": 3,
   "fields": {
-    "name": "Шаблон от 2025-07-30",
+    "name": "РЁР°Р±Р»РѕРЅ РѕС‚ 2025-07-30",
     "academic_year": 1,
     "is_active": false,
     "created_at": "2025-07-30T13:05:22.399Z",
-    "description": "Опубликовано пользователем admin"
+    "description": "РћРїСѓР±Р»РёРєРѕРІР°РЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј admin"
   }
 },
 {
   "model": "template.templateweek",
   "pk": 4,
   "fields": {
-    "name": "Шаблон от 2025-07-30",
+    "name": "РЁР°Р±Р»РѕРЅ РѕС‚ 2025-07-30",
     "academic_year": 1,
     "is_active": false,
     "created_at": "2025-07-30T14:32:15.004Z",
-    "description": "Опубликовано пользователем admin"
+    "description": "РћРїСѓР±Р»РёРєРѕРІР°РЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј admin"
   }
 },
 {
   "model": "template.templateweek",
   "pk": 5,
   "fields": {
-    "name": "Шаблон от 2025-07-30",
+    "name": "РЁР°Р±Р»РѕРЅ РѕС‚ 2025-07-30",
     "academic_year": 1,
     "is_active": true,
     "created_at": "2025-07-30T16:09:32.268Z",
-    "description": "Опубликовано пользователем admin"
+    "description": "РћРїСѓР±Р»РёРєРѕРІР°РЅРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј admin"
   }
 },
 {
@@ -1194,7 +1194,7 @@
     "subject": 3,
     "grade": 2,
     "academic_year": 1,
-    "name": "Математика 5А",
+    "name": "РњР°С‚РµРјР°С‚РёРєР° 5Рђ",
     "created_at": "2025-07-30T17:13:15.928Z"
   }
 },
@@ -1206,7 +1206,7 @@
     "subject": 2,
     "grade": 2,
     "academic_year": 1,
-    "name": "Русский язык 5А",
+    "name": "Р СѓСЃСЃРєРёР№ СЏР·С‹Рє 5Рђ",
     "created_at": "2025-07-30T17:14:52.117Z"
   }
 },
@@ -1218,7 +1218,7 @@
     "subject": 3,
     "grade": 3,
     "academic_year": 1,
-    "name": "КТП по Математика 6А",
+    "name": "РљРўРџ РїРѕ РњР°С‚РµРјР°С‚РёРєР° 6Рђ",
     "created_at": "2025-08-04T08:08:24.599Z"
   }
 },
@@ -1230,7 +1230,7 @@
     "subject": 4,
     "grade": 3,
     "academic_year": 1,
-    "name": "КТП по Информатика 6А",
+    "name": "РљРўРџ РїРѕ РРЅС„РѕСЂРјР°С‚РёРєР° 6Рђ",
     "created_at": "2025-08-04T08:08:24.606Z"
   }
 },
@@ -1242,7 +1242,7 @@
     "subject": 1,
     "grade": 1,
     "academic_year": 1,
-    "name": "КТП по История 4А",
+    "name": "РљРўРџ РїРѕ РСЃС‚РѕСЂРёСЏ 4Рђ",
     "created_at": "2025-08-04T08:08:24.610Z"
   }
 },
@@ -1254,7 +1254,7 @@
     "subject": 2,
     "grade": 1,
     "academic_year": 1,
-    "name": "КТП по Русский язык 4А",
+    "name": "РљРўРџ РїРѕ Р СѓСЃСЃРєРёР№ СЏР·С‹Рє 4Рђ",
     "created_at": "2025-08-04T08:08:24.614Z"
   }
 },
@@ -1266,7 +1266,7 @@
     "subject": 3,
     "grade": 1,
     "academic_year": 1,
-    "name": "КТП по Математика 4А",
+    "name": "РљРўРџ РїРѕ РњР°С‚РµРјР°С‚РёРєР° 4Рђ",
     "created_at": "2025-08-04T08:08:24.618Z"
   }
 },
@@ -1278,7 +1278,7 @@
     "subject": 1,
     "grade": 2,
     "academic_year": 1,
-    "name": "КТП по История 5А",
+    "name": "РљРўРџ РїРѕ РСЃС‚РѕСЂРёСЏ 5Рђ",
     "created_at": "2025-08-04T08:08:24.622Z"
   }
 },
@@ -1290,7 +1290,7 @@
     "subject": 4,
     "grade": 2,
     "academic_year": 1,
-    "name": "КТП по Информатика 5А",
+    "name": "РљРўРџ РїРѕ РРЅС„РѕСЂРјР°С‚РёРєР° 5Рђ",
     "created_at": "2025-08-04T08:08:24.627Z"
   }
 },
@@ -1299,7 +1299,7 @@
   "pk": 1,
   "fields": {
     "ktp_template": 1,
-    "title": "Пропорции",
+    "title": "РџСЂРѕРїРѕСЂС†РёРё",
     "description": "",
     "order": 1,
     "hours": 0,
@@ -1312,7 +1312,7 @@
   "pk": 2,
   "fields": {
     "ktp_template": 1,
-    "title": "Дроби",
+    "title": "Р”СЂРѕР±Рё",
     "description": "",
     "order": 0,
     "hours": 0,
@@ -1325,7 +1325,7 @@
   "pk": 3,
   "fields": {
     "ktp_template": 2,
-    "title": "Подлежащее",
+    "title": "РџРѕРґР»РµР¶Р°С‰РµРµ",
     "description": "",
     "order": 1,
     "hours": 0,
@@ -1338,7 +1338,7 @@
   "pk": 4,
   "fields": {
     "ktp_template": 1,
-    "title": "Задачи",
+    "title": "Р—Р°РґР°С‡Рё",
     "description": "",
     "order": 2,
     "hours": 0,
@@ -1355,11 +1355,11 @@
     "type": "lesson",
     "planned_date": null,
     "actual_date": null,
-    "title": "Обратная пропорциональная зависимость",
+    "title": "РћР±СЂР°С‚РЅР°СЏ РїСЂРѕРїРѕСЂС†РёРѕРЅР°Р»СЊРЅР°СЏ Р·Р°РІРёСЃРёРјРѕСЃС‚СЊ",
     "objectives": "1.",
     "tasks": "2.",
     "homework": "3.",
-    "materials": "для урока для урока",
+    "materials": "РґР»СЏ СѓСЂРѕРєР° РґР»СЏ СѓСЂРѕРєР°",
     "planned_outcomes": "5.",
     "motivation": "6.",
     "order": 1,
@@ -1377,11 +1377,11 @@
     "type": "lesson",
     "planned_date": null,
     "actual_date": null,
-    "title": "Обыкновенные",
+    "title": "РћР±С‹РєРЅРѕРІРµРЅРЅС‹Рµ",
     "objectives": "",
     "tasks": "",
     "homework": "",
-    "materials": "по русскому",
+    "materials": "РїРѕ СЂСѓСЃСЃРєРѕРјСѓ",
     "planned_outcomes": "",
     "motivation": "",
     "order": 1,
@@ -1399,7 +1399,7 @@
     "type": "lesson",
     "planned_date": null,
     "actual_date": null,
-    "title": "Второй урок",
+    "title": "Р’С‚РѕСЂРѕР№ СѓСЂРѕРє",
     "objectives": null,
     "tasks": null,
     "homework": null,
