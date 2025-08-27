@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/template/", include("schedule.template.urls")),
     path("api/draft/", include("schedule.draft.urls")),
     path("api/ktp/", include("schedule.ktp.urls")),
+    path("api/real_schedule/", include("schedule.real_schedule.urls")),
 
     # Пользователи/роли/заявки:
     # внутри users.urls регистрируются роутеры:

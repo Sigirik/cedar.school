@@ -111,3 +111,62 @@ docker compose up -d --build
 
 Остановить:
 docker compose down
+
+**Алгоритм работы с Git (для двоих)**
+Общие правила
+
+Базовые ветки:
+main (прод) ← staging (сборка) ← be/test и fe/test (интеграция своих PR).
+
+Рабочие ветки всегда из соответствующей test-ветки:
+BE → feature/be/<task> от be/test
+FE → feature/fe/<task> от fe/test
+
+Маленькие PR (≤300 SLOC), один логический смысл.
+
+PowerShell-команды без &&.
+
+# **Для бэкенда**
+1. Обновиться:
+git fetch origin
+git checkout be/test
+git pull
+2. Создать рабочую ветку:
+git checkout -b feature/be/<task-key>-short
+3. Работать → коммиты:
+git add -A
+git commit -m "be: <кратко что сделали>"
+git push -u origin feature/be/<task-key>-short
+4. PR → be/test
+Создай PR (GitHub UI или gh pr create --base be/test --head feature/be/<...>).
+В PR — чек-лист (см. ниже шаблон).
+5. После аппрува/CI зелёный → Merge в be/test.
+6. Промоут в staging:
+git checkout staging
+git pull
+git merge be/test
+git push origin staging
+(или PR be/test → staging — если нужно review)
+7. Релиз (когда FE тоже влит в staging и e2e ок):
+PR staging → main, после мержа поставить тег v0.1.0.
+
+# **Для фронтенда**
+1. Обновиться:
+git fetch origin
+git checkout fe/test
+git pull
+2. Создать рабочую ветку:
+git checkout -b feature/fe/<task-key>-short
+3. Работать → коммиты:
+git add -A
+git commit -m "fe: <кратко что сделали>"
+git push -u origin feature/fe/<task-key>-short
+4. PR → fe/test (чек-лист ниже).
+5. После аппрува/CI зелёный → Merge в fe/test.
+6. Промоут в staging (когда нужно собрать вместе с BE):
+git checkout staging
+git pull
+git merge fe/test
+git push origin staging
+(или PR fe/test → staging)
+7. Релиз: PR staging → main (совместно с BE).
