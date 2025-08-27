@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "schedule.template",
     "schedule.draft",
     "schedule.ktp",
+    "schedule.real_schedule.apps.RealScheduleConfig",
 
     "rest_framework",
     "corsheaders",

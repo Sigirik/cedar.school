@@ -212,3 +212,8 @@ __marimo__/
 */migrations/__pycache__/
 # Локальные настройки
 config/local_settings.py
+
+/frontend/.env*
+!frontend/.env*.example
+.idea/
+frontend.zip

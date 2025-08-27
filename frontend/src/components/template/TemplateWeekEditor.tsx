@@ -51,7 +51,7 @@ const TemplateWeekEditor: React.FC = () => {
         ] = await Promise.all([
           axios.get('/api/core/subjects/'),
           axios.get('/api/core/grades/'),
-          axios.get('/api/users/teachers/'),
+          axios.get('/api/teachers/'),
           axios.get('/api/core/weekly-norms/'),
           axios.get('/api/core/availabilities/'),
           axios.get('/api/template/weeks/'),
