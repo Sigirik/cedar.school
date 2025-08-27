@@ -6,7 +6,7 @@
 // ActiveTemplateWeekView.tsx
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { api } from "@/api/http";
 import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
 import { prepareLessons } from '../../utils/prepareLessons';
 import { message } from "antd";
@@ -26,13 +26,13 @@ const ActiveTemplateWeekView: React.FC = () => {
     async function fetchData() {
       try {
         const [weekRes, subjectsRes, gradesRes, teachersRes, normsRes, availabilityRes, draftRes] = await Promise.all([
-          axios.get("/api/template/active-week/"),
-          axios.get("/api/core/subjects/"),
-          axios.get("/api/core/grades/"),
-          axios.get("/api/users/teachers/"),
-          axios.get("/api/core/weekly-norms/"),
-          axios.get("/api/core/availabilities/"),
-          axios.get("/api/draft/template-drafts/exists/"), // ❗ добавь такой эндпоинт или замени
+          api.get("/template/active-week/"),
+          api.get("/core/subjects/"),
+          api.get("/core/grades/"),
+          api.get("teachers/"),
+          api.get("/core/weekly-norms/"),
+          api.get("/core/availabilities/"),
+          api.get("/draft/template-drafts/exists/"), // ❗ добавь такой эндпоинт или замени
         ]);
 
         const lessons = weekRes.data.lessons || weekRes.data.template?.lessons || [];
@@ -86,8 +86,8 @@ const ActiveTemplateWeekView: React.FC = () => {
         .split('; ')
         .find(row => row.startsWith('csrftoken='))?.split('=')[1];
 
-      await axios.post(
-        `/api/draft/template-drafts/create-from/`,
+      await api.post(
+        `draft/template-drafts/create-from/`,
           { template_id: templateId },
         { headers: { 'X-CSRFToken': csrftoken }, withCredentials: true }
       );
