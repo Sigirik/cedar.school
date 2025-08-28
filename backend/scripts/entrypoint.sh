@@ -1,46 +1,41 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
-# 1) миграции
+# Ждём БД
+python - <<'PY'
+import os, time, psycopg2
+host = os.getenv("DB_HOST","db")
+port = int(os.getenv("DB_PORT","5432"))
+user = os.getenv("POSTGRES_USER","cedar")
+password = os.getenv("POSTGRES_PASSWORD","cedar")
+dbname = os.getenv("POSTGRES_DB","cedar")
+for _ in range(30):
+    try:
+        psycopg2.connect(host=host, port=port, user=user, password=password, dbname=dbname).close()
+        break
+    except Exception:
+        time.sleep(1)
+PY
+
+# Миграции (идемпотентно)
 python manage.py migrate --noinput
 
-# 2) проверка наличия данных:
-# НЕ роняем скрипт — используем результат python в if/else.
-if python - <<'PY'
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE","config.settings")
-import django; django.setup()
-from schedule.template.models import TemplateWeek
-import sys
-# exit 0 => данные есть; exit 1 => данных нет
-sys.exit(0 if TemplateWeek.objects.exists() else 1)
-PY
-then
-  echo "[entrypoint] Data exists. Skipping seed."
-else
-  echo "[entrypoint] No data found. Loading seed/dev_seed.json..."
-  python manage.py loaddata seed/dev_seed.json
-fi
-
-# 3) опционально: автосоздание суперпользователя через ENV
-# DJ_CREATE_SUPERUSER=1 DJ_SUPERUSER_EMAIL=... DJ_SUPERUSER_PASSWORD=... [DJ_SUPERUSER_USERNAME=admin]
-if [ "${DJ_CREATE_SUPERUSER:-0}" = "1" ]; then
+# Создаём суперпользователя, если его нет (идемпотентно)
+if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then
   python - <<'PY'
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE","config.settings")
-import django; django.setup()
 from django.contrib.auth import get_user_model
 User = get_user_model()
-email = os.getenv("DJ_SUPERUSER_EMAIL")
-password = os.getenv("DJ_SUPERUSER_PASSWORD")
-username = os.getenv("DJ_SUPERUSER_USERNAME","admin")
-if email and password and not User.objects.filter(username=username).exists():
-    User.objects.create_superuser(username=username, email=email, password=password)
-    print("[entrypoint] Superuser created:", username)
+u = os.environ["DJANGO_SUPERUSER_USERNAME"]
+e = os.environ.get("DJANGO_SUPERUSER_EMAIL","admin@example.com")
+p = os.environ["DJANGO_SUPERUSER_PASSWORD"]
+if not User.objects.filter(username=u).exists():
+    User.objects.create_superuser(username=u, email=e, password=p)
+    print(f"[entrypoint] Superuser '{u}' created")
 else:
-    print("[entrypoint] Superuser skipped")
+    print(f"[entrypoint] Superuser '{u}' already exists")
 PY
 fi
 
-# 4) запуск дев-сервера
+# Запуск dev-сервера (или gunicorn — как удобно)
 python manage.py runserver 0.0.0.0:8000
