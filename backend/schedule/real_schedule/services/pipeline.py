@@ -9,12 +9,13 @@ from datetime import timezone as dt_timezone
 from dataclasses import dataclass
 from typing import Iterable
 
+from django.apps import apps
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from schedule.real_schedule.models import RealLesson
-from schedule.template.models import ActiveTemplateWeek, TemplateLesson
+from schedule.template.models import TemplateWeek, TemplateLesson
 from schedule.ktp.models import KTPEntry
 
 
@@ -35,8 +36,14 @@ class CollisionError(Exception):
 
 
 def _active_template_week_id() -> int | None:
-    atw = ActiveTemplateWeek.objects.select_related("template").first()
-    return atw.template_id if atw else None
+    tw = (
+        TemplateWeek.objects
+        .filter(is_active=True)
+        .only("id")
+        .order_by("-id")
+        .first()
+    )
+    return tw.id if tw else None
 
 
 def _iter_dates(d_from: dt.date, d_to: dt.date) -> Iterable[dt.date]:
@@ -49,10 +56,11 @@ def _iter_dates(d_from: dt.date, d_to: dt.date) -> Iterable[dt.date]:
 def _collect_template_lessons_for_range(template_week_id: int, d_from: dt.date, d_to: dt.date):
     """
     Для каждого дня в интервале [from..to] подбираем уроки шаблона по day_of_week.
-    Возвращает итератор с dict-ами для сборки RealLesson.
+    Возвращает итератор словарей: {"real_date": date, "template_lesson": tl}
     """
     lessons = list(
-        TemplateLesson.objects.filter(template_week_id=template_week_id)
+        TemplateLesson.objects
+        .filter(template_week_id=template_week_id)
         .select_related("subject", "grade", "teacher", "type")
         .order_by("day_of_week", "start_time")
     )
@@ -62,31 +70,71 @@ def _collect_template_lessons_for_range(template_week_id: int, d_from: dt.date, 
         by_weekday.setdefault(tl.day_of_week, []).append(tl)
 
     for date in _iter_dates(d_from, d_to):
-        weekday = date.weekday()  # 0=Mon
+        weekday = date.weekday()  # 0 = Monday
         for tl in by_weekday.get(weekday, []):
             yield {"real_date": date, "template_lesson": tl}
 
+def _select_ktp_template_id(grade_id: int, subject_id: int) -> int | None:
+    """Авто-детект подходящего KTPTemplate для пары (grade, subject)."""
+    KTPTemplate = apps.get_model('ktp','KTPTemplate')
+    qs = KTPTemplate.objects.filter(grade_id=grade_id, subject_id=subject_id)
 
-def _find_ktp_entry(subject_id: int, grade_id: int, date_: dt.date, template_lesson_id: int | None):
-    """
-    Ищем KTPEntry по planned_date + пара (subject, grade).
-    Если есть несколько — приоритет тем, где template_lesson совпадает.
-    """
-    qs = (
-        KTPEntry.objects.select_related("section__ktp_template")
-        .filter(
-            section__ktp_template__subject_id=subject_id,
-            section__ktp_template__grade_id=grade_id,
-            planned_date=date_,
-        )
-        .order_by("order")
+    # если есть флаг активности — приоритизируем
+    field_names = {f.name for f in KTPTemplate._meta.get_fields()}
+    if 'is_active' in field_names:
+        active = list(qs.filter(is_active=True).values_list('id', flat=True))
+        if len(active) == 1:
+            return active[0]
+        elif len(active) > 1:
+            # несколько активных — возьмём самый новый
+            return max(active)
+
+    # иначе — просто самый новый по id
+    last = qs.order_by('-id').values_list('id', flat=True).first()
+    return last
+
+def _find_ktp_entry(
+    subject_id: int,
+    grade_id: int,
+    date_: dt.date,
+    template_lesson_id: int | None,
+    *,
+    used_ids: set[int] | None = None,
+    ktp_template_id: int | None = None,
+):
+    KTPEntry = apps.get_model('ktp', 'KTPEntry')
+
+    base = KTPEntry.objects.filter(
+        section__ktp_template__grade_id=grade_id,
+        section__ktp_template__subject_id=subject_id,
     )
-    if template_lesson_id:
-        with_tl = qs.filter(template_lesson_id=template_lesson_id).first()
-        if with_tl:
-            return with_tl
-    return qs.first()
 
+    # уточняем шаблон КТП (либо явно из аргумента, либо авто-детект)
+    if ktp_template_id is None:
+        ktp_template_id = _select_ktp_template_id(grade_id, subject_id)
+    if ktp_template_id is not None:
+        base = base.filter(section__ktp_template_id=ktp_template_id)
+
+    if used_ids:
+        base = base.exclude(id__in=list(used_ids))
+
+    # 0) жёсткая связка с шаблонным уроком
+    if template_lesson_id:
+        e = base.filter(template_lesson_id=template_lesson_id).order_by('order').first()
+        if e: return e
+
+    # 1) точная дата
+    e = base.filter(planned_date=date_).order_by('order').first()
+    if e: return e
+
+    # 2) «свободные» (без плановой даты)
+    e = base.filter(planned_date__isnull=True).order_by('order').first()
+    if e: return e
+
+    # 3) ближайшие по дате
+    e = (base.filter(planned_date__gt=date_).order_by('planned_date','order').first()
+         or base.filter(planned_date__lt=date_).order_by('-planned_date','order').first())
+    return e
 
 def _collect_collisions(new_lessons: list[RealLesson]) -> dict:
     """
@@ -182,6 +230,8 @@ def generate(
     if template_week_id is None:
         raise ValueError("NO_ACTIVE_TEMPLATE")
 
+    debug_info = {"template_week_id": template_week_id}
+
     if rewrite_from is None:
         rewrite_from = from_date
 
@@ -198,6 +248,15 @@ def generate(
     prev_version = RealLesson.objects.aggregate(m=Max("version"))["m"] or 0
     new_version = prev_version + 1
     batch_id = uuid.uuid4()
+
+    used_ktp_ids: set[int] = set(
+        RealLesson.objects.exclude(ktp_entry_id=None).values_list("ktp_entry_id", flat=True)
+    )
+
+    # Темы КТП, уже использованные в существующих уроках (вне текущего окна)
+    used_ktp_ids: set[int] = set(
+        RealLesson.objects.exclude(ktp_entry_id=None).values_list("ktp_entry_id", flat=True)
+    )
 
     # Загружаем уроки шаблона и собираем набор RealLesson
     to_insert: list[RealLesson] = []
@@ -226,18 +285,23 @@ def generate(
         )
 
         # Привязка к KTPEntry по planned_date
-        entry = _find_ktp_entry(tl.subject_id, tl.grade_id, date_, tl.id)
+        entry = _find_ktp_entry(
+            tl.subject_id, tl.grade_id, date_, tl.id,
+            used_ids=used_ktp_ids,
+            ktp_template_id=None,  # или подставим явно из API (см. ниже)
+        )
+
         if entry:
             rl.ktp_entry_id = entry.id
             rl.topic_order = entry.order
             rl.topic_title = entry.title
+            used_ktp_ids.add(entry.id)
         else:
-            warnings.append(
-                {
-                    "code": "KTP_MISS",
-                    "message": f"Нет KTPEntry для {date_} {tl.grade_id}/{tl.subject_id}",
-                }
-            )
+            rl.topic_title = "Тему задаст учитель на уроке"
+            warnings.append({
+                "code": "KTP_MISS",
+                "message": f"Нет KTPEntry для {date_} {tl.grade_id}/{tl.subject_id}",
+            })
 
         if rl.duration_minutes <= 0:
             raise ValueError("MISSING_OR_INVALID_DURATION")
@@ -252,7 +316,7 @@ def generate(
         msg = ("OVERLAP_GRADE on (%s, %s)" % (k[0], k[1])) if collisions["grade"] else \
               ("OVERLAP_TEACHER on (%s, %s)" % (k[0], k[1]))
         if debug:
-            raise CollisionError({"message": msg, "collisions": collisions})
+            raise CollisionError({"message": msg, "collisions": collisions, **debug_info})
         raise ValueError(msg)
 
     # Вставка
