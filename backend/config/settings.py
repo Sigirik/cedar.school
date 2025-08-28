@@ -76,15 +76,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# -----------------------------------------------------------------------------
 # Database
-# Используем Postgres из переменных окружения POSTGRES_*, иначе — SQLite
-# .env / compose пример:
-#   POSTGRES_DB=cedar
-#   POSTGRES_USER=cedar
-#   POSTGRES_PASSWORD=cedar
-#   DB_HOST=db
-#   DB_PORT=5432
+# Dev: форсим SQLite через USE_SQLITE=1 (общий db.sqlite3 в репозитории).
+# Иначе: если заданы POSTGRES_* → Postgres, иначе — SQLite.
 # -----------------------------------------------------------------------------
 PG_NAME = os.getenv("POSTGRES_DB")
 PG_USER = os.getenv("POSTGRES_USER")
@@ -92,7 +86,9 @@ PG_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 PG_HOST = os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "db"))
 PG_PORT = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5432"))
 
-if PG_NAME and PG_USER and PG_PASSWORD:
+USE_SQLITE = env_bool("USE_SQLITE", False)
+
+if not USE_SQLITE and PG_NAME and PG_USER and PG_PASSWORD:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -101,8 +97,8 @@ if PG_NAME and PG_USER and PG_PASSWORD:
             "PASSWORD": PG_PASSWORD,
             "HOST": PG_HOST,
             "PORT": PG_PORT,
-            "CONN_MAX_AGE": 600,                # держим соединения
-            "OPTIONS": {"connect_timeout": 5},  # быстрая ошибка, если БД недоступна
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {"connect_timeout": 5},
         }
     }
 else:

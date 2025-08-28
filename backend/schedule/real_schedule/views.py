@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 
 from schedule.real_schedule.models import RealLesson, Room
 from schedule.real_schedule.serializers import RealLessonSerializer, RoomSerializer
-from schedule.real_schedule.services.pipeline import generate
+from schedule.real_schedule.services.pipeline import generate, CollisionError
 
 
 def _parse_date_value(value):
@@ -49,8 +49,21 @@ class GenerateRealScheduleView(APIView):
 
         tpl_id = request.data.get("template_week_id") or request.query_params.get("template_week_id")
 
+        debug_flag = bool(request.data.get("debug") or request.query_params.get("debug"))
+
         try:
-            res = generate(from_date=d_from, to_date=d_to, template_week_id=tpl_id, rewrite_from=rewrite_from)
+            res = generate(
+                from_date=d_from,
+                to_date=d_to,
+                template_week_id=tpl_id,
+                rewrite_from=rewrite_from,
+                debug=debug_flag,
+            )
+        except CollisionError as e:
+            return Response({
+                "detail": "COLLISIONS",
+                **(e.details or {}),
+            }, status=status.HTTP_400_BAD_REQUEST)
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
         except Exception as e:

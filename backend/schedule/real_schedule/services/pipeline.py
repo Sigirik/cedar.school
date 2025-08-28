@@ -27,6 +27,13 @@ class GenerateResult:
     warnings: list
 
 
+class CollisionError(Exception):
+    """Поднимаем, когда нашли пересечения; details — структурированная диагностика."""
+    def __init__(self, details: dict):
+        self.details = details
+        super().__init__("COLLISIONS_FOUND")
+
+
 def _active_template_week_id() -> int | None:
     atw = ActiveTemplateWeek.objects.select_related("template").first()
     return atw.template_id if atw else None
@@ -81,36 +88,80 @@ def _find_ktp_entry(subject_id: int, grade_id: int, date_: dt.date, template_les
     return qs.first()
 
 
-def _validate_collisions(new_lessons: list[RealLesson]):
+def _collect_collisions(new_lessons: list[RealLesson]) -> dict:
     """
-    Простая проверка пересечений по учителю/классу в рамках создаваемого набора — по точным датам.
+    Возвращает подробности пересечений:
+    {
+      "teacher": [ { "key": [date, teacher_id], "clusters": [ [idx, ...], ... ] , "items": [...] } ],
+      "grade":   [ { "key": [date, grade_id],   "clusters": [ [idx, ...], ... ] , "items": [...] } ],
+    }
+    где items — список по ключу с полями уроков (для диагностики).
     """
     from collections import defaultdict
 
-    by_date_teacher = defaultdict(list)  # (date, teacher_id) -> [(start, end, idx)]
-    by_date_grade = defaultdict(list)    # (date, grade_id)   -> [(start, end, idx)]
+    def end_for(rl: RealLesson) -> dt.datetime:
+        return rl.start + dt.timedelta(minutes=rl.duration_minutes)
 
-    for idx, rl in enumerate(new_lessons):
-        end = rl.start + dt.timedelta(minutes=rl.duration_minutes)
+    def group(items):
+        """items: list[(start, end, idx)] → список кластеров пересечений по индексам."""
+        items_sorted = sorted(items, key=lambda x: (x[0], x[1]))
+        clusters: list[list[int]] = []
+        cur: list[tuple[dt.datetime, dt.datetime, int]] = []
+        for it in items_sorted:
+            if not cur:
+                cur = [it]
+                continue
+            if it[0] < cur[-1][1]:  # начало раньше конца последнего — пересечение
+                cur.append(it)
+            else:
+                if len(cur) > 1:
+                    clusters.append([idx for *_t, idx in cur])
+                cur = [it]
+        if cur and len(cur) > 1:
+            clusters.append([idx for *_t, idx in cur])
+        return clusters
+
+    # удобные описания для вывода
+    items_desc: list[dict] = []
+    for i, rl in enumerate(new_lessons):
+        items_desc.append({
+            "i": i,
+            "date": rl.start.date().isoformat(),
+            "start": rl.start.isoformat(),
+            "end": (rl.start + dt.timedelta(minutes=rl.duration_minutes)).isoformat(),
+            "grade_id": rl.grade_id,
+            "teacher_id": rl.teacher_id,
+            "subject_id": rl.subject_id,
+            "template_lesson_id": rl.template_lesson_id,
+        })
+
+    by_teacher = defaultdict(list)  # (date, teacher_id) -> [(start,end,i), ...]
+    by_grade   = defaultdict(list)  # (date, grade_id)   -> [(start,end,i), ...]
+    for i, rl in enumerate(new_lessons):
         d = rl.start.date()
-        by_date_teacher[(d, rl.teacher_id)].append((rl.start, end, idx))
-        by_date_grade[(d, rl.grade_id)].append((rl.start, end, idx))
+        by_teacher[(d, rl.teacher_id)].append((rl.start, end_for(rl), i))
+        by_grade[(d, rl.grade_id)].append((rl.start, end_for(rl), i))
 
-    def overlaps(items):
-        items.sort(key=lambda x: (x[0], x[1]))
-        for i in range(len(items) - 1):
-            s1, e1, _ = items[i]
-            s2, e2, _ = items[i + 1]
-            if s2 < e1:
-                return True
-        return False
+    def build(coll_map, key_name):
+        out = []
+        for key, arr in coll_map.items():
+            clusters = group(arr)
+            if not clusters:
+                continue
+            key_date, key_id = key
+            items = [it for it in items_desc
+                     if it[key_name] == key_id and it["date"] == key_date.isoformat()]
+            out.append({
+                "key": [key_date.isoformat(), key_id],
+                "clusters": clusters,
+                "items": items,
+            })
+        return out
 
-    for key, items in by_date_teacher.items():
-        if overlaps(items):
-            raise ValueError(f"OVERLAP_TEACHER on {key}")
-    for key, items in by_date_grade.items():
-        if overlaps(items):
-            raise ValueError(f"OVERLAP_GRADE on {key}")
+    return {
+        "teacher": build(coll_map=by_teacher, key_name="teacher_id"),
+        "grade":   build(coll_map=by_grade,   key_name="grade_id"),
+    }
 
 
 @transaction.atomic
@@ -119,6 +170,7 @@ def generate(
     to_date: dt.date,
     template_week_id: int | None = None,
     rewrite_from: dt.date | None = None,
+    debug: bool = False,
 ) -> GenerateResult:
     """
     1) Жёстко удаляем все RealLesson с source=TEMPLATE и start >= rewrite_from
@@ -193,7 +245,15 @@ def generate(
         to_insert.append(rl)
 
     # Валидации пересечений внутри создаваемого набора
-    _validate_collisions(to_insert)
+    collisions = _collect_collisions(to_insert)
+    if collisions["grade"] or collisions["teacher"]:
+        first = (collisions["grade"][0] if collisions["grade"] else collisions["teacher"][0])
+        k = first["key"]
+        msg = ("OVERLAP_GRADE on (%s, %s)" % (k[0], k[1])) if collisions["grade"] else \
+              ("OVERLAP_TEACHER on (%s, %s)" % (k[0], k[1]))
+        if debug:
+            raise CollisionError({"message": msg, "collisions": collisions})
+        raise ValueError(msg)
 
     # Вставка
     RealLesson.objects.bulk_create(to_insert, batch_size=500)

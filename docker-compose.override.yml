@@ -1,0 +1,9 @@
+services:
+  backend:
+    environment:
+      - USE_SQLITE=1     # форсим SQLite в dev
+      - DB_HOST=         # пусто → entrypoint не ждёт Postgres
+      # обнулим POSTGRES_*, чтобы settings не “увидел” их
+      - POSTGRES_DB=
+      - POSTGRES_USER=
+      - POSTGRES_PASSWORD=

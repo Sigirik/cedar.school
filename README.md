@@ -90,27 +90,40 @@ docker compose up --build
 - Если в БД нет данных, он загрузит seed/dev_seed.json.
 - Повторные запуски сид не перезаливают.
 
-Ручные команды:
-docker compose exec backend python manage.py loaddata seed/dev_seed.json
-docker compose exec backend python manage.py migrate
+# **DOCKER**
 
-Мини-шпаргалка по командам docker
-
-Запуск:
+## Весь стек
+# запустить (создаст, если ещё нет)
 docker compose up -d
+# остановить (не удаляя)
+docker compose stop
+# перезапустить
+docker compose restart
+# посмотреть состояние
+docker compose ps
+# логи (в реальном времени)
+docker compose logs -f
 
-Логи бэка:
-docker compose logs -f web
+## Только backend
+# запустить только backend (и db подтянется, если нужно)
+docker compose up -d backend
+# остановить только backend
+docker compose stop backend
+# перезапустить только backend
+docker compose restart backend
+# логи backend (последние 200 строк)
+docker compose logs backend --tail 200
+docker compose logs -f backend     # “follow”
 
-Одноразовые Django-команды (внутри запущенного сервиса):
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py createsuperuser
-
-Пересобрать (если поменялся requirements.txt):
-docker compose up -d --build
-
-Остановить:
-docker compose down
+## Полная пересборка / пересоздание
+# пересоздать контейнеры без удаления томов (быстро)
+docker compose up -d --force-recreate
+# пересобрать образы (если менялся Dockerfile/requirements)
+docker compose build
+docker compose up -d
+# жёсткая пересборка без кэша
+docker compose build --no-cache
+docker compose up -d
 
 **Алгоритм работы с Git (для двоих)**
 Общие правила
