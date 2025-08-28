@@ -140,6 +140,52 @@ FE → feature/fe/<task> от fe/test
 PowerShell-команды без &&.
 
 # **Для бэкенда**
+0) Сначала приведи рабочее дерево в чистое состояние
+
+Вариант A — сохранить текущие правки:
+
+git add -A
+git commit -m "wip: local changes before switching branches"
+
+
+Вариант B — отложить (stash), если коммитить не хочешь:
+
+git stash push -u -m "temp before switching to staging"
+
+1) Убедись, что be/test свежая
+git checkout be/test
+git pull origin be/test
+
+2) От ветки staging создай промоут-ветку
+git checkout staging
+git pull origin staging
+git checkout -b promote/backend-to-staging-YYYYMMDD
+
+3) Притяни только нужные пути из be/test
+
+(backend целиком + файлы в корне; список можно скорректировать под твой репозиторий)
+
+# из be/test «принеси» каталоги/файлы в текущую ветку
+git checkout be/test -- backend/
+git checkout be/test -- docker-compose.yml
+git checkout be/test -- docker-compose.override.yml
+git checkout be/test -- .gitattributes
+git checkout be/test -- .gitignore
+git checkout be/test -- README.md
+# добавь другие корневые файлы, если нужны: e.g. .env.example, Makefile и т.п.
+
+
+Посмотри, что изменилось:
+
+git status
+git diff --name-only
+
+4) Закоммить и запушить
+git add -A
+git commit -m "promote: backend + root from be/test (exclude frontend)"
+git push -u origin promote/backend-to-staging-YYYYMMDD
+
+### Старая инструкция
 1. Обновиться:
 git fetch origin
 git checkout be/test
