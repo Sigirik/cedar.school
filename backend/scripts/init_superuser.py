@@ -1,4 +1,11 @@
-import os, django
+import os, sys, django
+from pathlib import Path
+
+# гарантируем, что корень проекта в sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent  # /app
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
@@ -18,4 +25,6 @@ if created:
     print(f"[init_superuser] Created superuser {u}")
 else:
     print(f"[init_superuser] Superuser {u} already exists")
+
+
 

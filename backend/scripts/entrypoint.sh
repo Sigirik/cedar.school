@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 cd /app
-
+export PYTHONPATH="/app:${PYTHONPATH:-}"
 # Подождать БД, если задан DB_HOST (как у вас было)
 if [[ -n "${DB_HOST:-}" ]]; then
   echo "Waiting for Postgres at ${DB_HOST}:${DB_PORT:-5432}..."
@@ -21,7 +21,7 @@ python manage.py migrate --noinput
 
 if [[ "${SKIP_SUPERUSER:-0}" != "1" ]]; then
   echo "Ensure superuser exists..."
-  python /app/scripts/init_superuser.py
+  python scripts/init_superuser.py
 fi
 
 if [[ "${DJANGO_COLLECTSTATIC:-0}" == "1" ]]; then
@@ -31,4 +31,6 @@ fi
 
 echo "Run: $*"
 exec "$@"
+
+
 
