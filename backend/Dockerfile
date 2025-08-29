@@ -18,6 +18,26 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 # Копируем весь backend (включая scripts/entrypoint.sh)
 COPY . /app/
 
+# гарантируем, что есть pg_isready
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+
+# нормализуем окончания строк и делаем скрипт исполняемым (страховка от CRLF)
+RUN sed -i 's/\r$//' /app/scripts/entrypoint.sh \
+ && chmod +x /app/scripts/entrypoint.sh
+
+# удобные дефолтные переменные
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# запускаем через entrypoint и передаём команду (dev — runserver)
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+CMD ["python","manage.py","runserver","0.0.0.0:8000","--insecure"]
+
+RUN find /app/scripts -type f -name "*.sh" -exec sed -i 's/\r$//' {} \; \
+    && chmod +x /app/scripts/*.sh
+
 EXPOSE 8000
 
 # ВАЖНО: один способ запуска — наш скрипт в репозитории
