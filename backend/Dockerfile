@@ -15,7 +15,7 @@ COPY requirements.txt /app/
 RUN python -m pip install --upgrade pip setuptools wheel \
  && pip install --no-cache-dir --default-timeout=120 --retries 5 -r requirements.txt
 
-# Копируем весь backend (включая scripts/entrypoint.sh)
+# Копируем код приложения
 COPY . /app/
 
 # гарантируем, что есть pg_isready
@@ -23,16 +23,18 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends postgresql-client \
  && rm -rf /var/lib/apt/lists/*
 
-# нормализуем окончания строк и делаем скрипт исполняемым (страховка от CRLF)
-RUN sed -i 's/\r$//' /app/scripts/entrypoint.sh \
- && chmod +x /app/scripts/entrypoint.sh
+
+# Копируем entrypoint туда, где его не накроет volume
+COPY scripts/entrypoint.sh /usr/local/bin/cedar-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/cedar-entrypoint.sh \
+ && chmod +x /usr/local/bin/cedar-entrypoint.sh
 
 # удобные дефолтные переменные
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # запускаем через entrypoint и передаём команду (dev — runserver)
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/cedar-entrypoint.sh"]
 CMD ["python","manage.py","runserver","0.0.0.0:8000","--insecure"]
 
 RUN find /app/scripts -type f -name "*.sh" -exec sed -i 's/\r$//' {} \; \
