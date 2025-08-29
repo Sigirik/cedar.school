@@ -1,1 +1,4 @@
 *.sqlite3 binary
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
