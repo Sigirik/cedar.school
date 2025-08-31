@@ -32,5 +32,3 @@ fi
 echo "Run: $*"
 exec "$@"
 
-
-

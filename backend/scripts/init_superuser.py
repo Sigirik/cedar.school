@@ -25,6 +25,3 @@ if created:
     print(f"[init_superuser] Created superuser {u}")
 else:
     print(f"[init_superuser] Superuser {u} already exists")
-
-
-
