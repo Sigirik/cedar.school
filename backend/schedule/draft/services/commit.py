@@ -1,35 +1,39 @@
-# draft/services/commit.py (примерное место)
 import logging
-from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400
+from django.utils import timezone
+from django.db import transaction
+
+from schedule.template.models import TemplateWeek
+from schedule.template.serializers import TemplateLessonWriteSerializer  # ← ДОЛЖЕН БЫТЬ
 
 logger = logging.getLogger("cedar.draft.commit")
 
-def _normalize_type_id_or_400(draft_lesson) -> int:
+
+def commit_draft_to_template(draft_obj):
     """
-    draft_lesson: dict или модель черновика.
-    Ожидается поле 'type' в исходных данных черновика (строка или dict).
+    Публикует активный черновик в TemplateWeek и создаёт TemplateLesson'ы через
+    TemplateLessonWriteSerializer. Поле 'type' из черновика маппится в FK 'type'.
     """
-    raw = None
-    if isinstance(draft_lesson, dict):
-        raw = draft_lesson.get("type")
-    else:
-        raw = getattr(draft_lesson, "type", None)
+    data = (getattr(draft_obj, "data", {}) or {})
+    lessons = data.get("lessons", [])
 
-    lt = get_lesson_type_or_400(raw)
-    return lt.id
+    week = TemplateWeek.objects.create(name=f"Draft {timezone.now():%Y-%m-%d %H:%M}")
 
-def commit_draft_to_template(draft_obj, *args, **kwargs):
-    # ... ваша существующая транзакционная логика, итерация по lessons ...
-    for d in lessons:  # d — dict из draft.data['lessons']
-        # ... маппинг прочих полей ...
-        lesson_type_id = _normalize_type_id_or_400(d)
+    create_template_lessons_from_draft(draft_obj, week)  # ← Оставляем ТОЛЬКО ЭТОТ путь
 
-        template_lesson = TemplateLesson(
-            # ...
-            lesson_type_id=lesson_type_id,
-            # ...
-        )
-        template_lesson.save()
-        logger.info("commit_draft: lesson mapped type → id=%s", lesson_type_id)
+    logger.info("commit_draft: published week id=%s; lessons=%s", week.id, len(lessons))
+    return week
 
-    # ...
+
+def create_template_lessons_from_draft(draft_obj, week: TemplateWeek):
+    """
+    Берёт draft.data['lessons'] и создаёт TemplateLesson через write-сериализатор.
+    """
+    data = (getattr(draft_obj, "data", {}) or {})
+    lessons = data.get("lessons", [])
+
+    with transaction.atomic():
+        for d in lessons:
+            ser = TemplateLessonWriteSerializer(data=d)
+            ser.is_valid(raise_exception=True)
+            # поле в модели называется template_week
+            ser.save(template_week=week)

@@ -1,5 +1,4 @@
 from typing import Any, Dict, Optional, Union
-from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from schedule.core.models import LessonType
 
@@ -10,10 +9,9 @@ def _strip_or_none(v: Optional[str]) -> Optional[str]:
 
 def get_lesson_type_or_400(payload: Payload) -> LessonType:
     """
-    Принимает:
-      - строку -> пробуем как key, затем как label (case-insensitive)
-      - dict -> пробуем {'key': ...} и/или {'label': ...}
-    Возвращает LessonType или бросает DRF ValidationError 400 с подсказками.
+    Поддерживает:
+      - "lecture"  (строка по key/label, регистр не важен)
+      - {"key": "..."} / {"label": "..."}
     """
     if payload is None or (isinstance(payload, dict) and not payload):
         raise ValidationError({"type": "Тип урока обязателен (key или label)."})
@@ -23,19 +21,14 @@ def get_lesson_type_or_400(payload: Payload) -> LessonType:
         key = _strip_or_none(payload.get("key"))
         label = _strip_or_none(payload.get("label"))
     else:
-        # payload — строка: пытаемся и как key, и как label
         s = _strip_or_none(str(payload))
-        key, label = s, s
+        key = label = s
 
     qs = LessonType.objects.all()
-    lt = None
-
-    if key:
-        lt = qs.filter(key__iexact=key).first()
+    lt = qs.filter(key__iexact=key).first() if key else None
     if lt is None and label:
         lt = qs.filter(label__iexact=label).first()
-
-    if lt is not None:
+    if lt:
         return lt
 
     available = list(qs.values("key", "label"))
@@ -44,6 +37,6 @@ def get_lesson_type_or_400(payload: Payload) -> LessonType:
             "message": "Неизвестный тип урока. Используйте 'key' или 'label'.",
             "received": payload,
             "available": available,
-            "hint": "Например: {'type': {'key': 'lecture'}} или {'type': {'label': 'Лекция'}}"
+            "hint": "Напр.: {'type': {'key': 'lecture'}} или {'type': {'label': 'Лекция'}}",
         }
     })
