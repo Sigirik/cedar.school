@@ -14,6 +14,7 @@ import FullCalendar from '@fullcalendar/react';
 import type { EventClickArg } from '@fullcalendar/core';
 import type { EventDropArg, EventResizeDoneArg } from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from '@fullcalendar/interaction';
 import ruLocale from '@fullcalendar/core/locales/ru';
 
@@ -38,6 +39,8 @@ interface Props {
   onEventResize?: (info: EventResizeDoneArg) => void;
   onEventClick?: (info: EventClickArg) => void;
   collisionMap?: Record<string, 'error' | 'warning'>;
+  initialDate?: string | Date;                           // новое (якорь)
+  view?: "timeGridDay" | "timeGridWeek" | "dayGridMonth"; // новое (вид)
 }
 
 const FullCalendarTemplateView: React.FC<Props> = ({
@@ -48,14 +51,17 @@ const FullCalendarTemplateView: React.FC<Props> = ({
   onEventResize,
   onEventClick,
   collisionMap,
+  initialDate,
+  view = "timeGridWeek",
 }) => {
   return (
     <>
       <FullCalendar
-        plugins={[timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        initialDate="2025-07-07"
-        hiddenDays={[6, 0]}
+        key={`${view}-${String(initialDate)}`}           // безопасный ремоунт при смене
+        plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+        initialView={view}
+        initialDate={initialDate ?? "2025-07-07"}
+        hiddenDays={view === "dayGridMonth" ? [] : [0, 6]} // в месяце показываем все дни
         allDaySlot={false}
         slotMinTime="08:00:00"
         slotMaxTime="17:00:00"

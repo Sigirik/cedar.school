@@ -21,13 +21,6 @@ import PrivateRoute from './components/routing/PrivateRoute';
 import { RoleBasedRoute } from './components/routing/RoleBasedRoute';
 import AppHeader from './components/layout/AppHeader';
 
-const ForbiddenPage: React.FC = () => (
-  <div className="p-6 max-w-xl mx-auto">
-    <h2 className="text-xl font-semibold mb-2">Доступ запрещён</h2>
-    <p className="text-gray-600">У вас нет прав для просмотра этой страницы.</p>
-  </div>
-);
-
 const AppRouter: React.FC = () => {
   return (
     <Router>
@@ -124,7 +117,6 @@ const AppRouter: React.FC = () => {
           }
         />
         <Route path="/debug/auth" element={<AuthDebugPage />} />
-        <Route path="/forbidden" element={<ForbiddenPage />} />
       </Routes>
     </Router>
   );

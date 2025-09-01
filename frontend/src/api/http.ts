@@ -112,3 +112,23 @@ api.interceptors.response.use(
     }
   }
 );
+
+// ---- RESPONSE: 403 → /forbidden ----
+api.interceptors.response.use(
+  (r) => r,
+  (error: AxiosError) => {
+    if (error.response?.status === 403 && typeof window !== "undefined") {
+      try {
+        const { pathname, search, hash } = window.location;
+        // не зацикливаемся, если уже на странице запрета
+        if (!pathname.startsWith("/forbidden")) {
+          const from = encodeURIComponent(pathname + search + hash);
+          window.location.replace(`/forbidden?from=${from}`);
+        }
+      } catch {
+        // no-op
+      }
+    }
+    return Promise.reject(error);
+  }
+);
