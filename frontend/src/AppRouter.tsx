@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
+import MyScheduleCalendar from './components/calendar/MyScheduleCalendar';
 import TemplateWeekEditor from './components/template/TemplateWeekEditor';
 import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
 import KtpEditor from './components/ktp/KtpEditor';
@@ -56,6 +57,15 @@ const AppRouter: React.FC = () => {
           element={
             <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER']}>
               <ActiveTemplateWeekView />
+            </RoleBasedRoute>
+          }
+        />
+
+        <Route
+          path="/schedule"
+          element={
+            <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
+              <MyScheduleCalendar />
             </RoleBasedRoute>
           }
         />

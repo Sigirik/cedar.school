@@ -87,6 +87,7 @@ const AppHeader: React.FC = () => {
           <Link to="/" className="text-lg font-semibold">Cedar.school</Link>
           <nav className="hidden md:flex items-center gap-3 text-sm text-gray-700">
             <Link to="/dashboard" className="hover:underline">Дашборд</Link>
+            <Link to="/schedule" className="hover:underline">Расписание</Link>
             <Link to="/template-week" className="hover:underline">Шаблон недели</Link>
             <Link to="/ktp" className="hover:underline">КТП</Link>
             <Link to="/admin/role-requests" className="hover:underline">Заявки</Link>
