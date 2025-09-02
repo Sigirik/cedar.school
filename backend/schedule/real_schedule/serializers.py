@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+import os
 import datetime as dt
 from typing import Optional
+from django.conf import settings
 from rest_framework import serializers
 
 from schedule.real_schedule.models import RealLesson, Room
 
+try:
+    from zoneinfo import ZoneInfo  # py3.9+
+except Exception:  # pragma: no cover
+    ZoneInfo = None  # на современных образах не понадобится
 
-# ——— Используется другими эндпойнтами (оставляем как было) ———
+
+# Школьная TZ: по умолчанию Europe/Amsterdam, можно переопределить
+_SCHOOL_TZ_NAME = getattr(settings, "SCHOOL_TIME_ZONE", None) or os.getenv("SCHOOL_TZ", "Europe/Amsterdam")
+_SCHOOL_TZ = ZoneInfo(_SCHOOL_TZ_NAME) if ZoneInfo else None
+
+
+# ——— Сериализаторы, используемые другими эндпойнтами (оставляем как были) ———
 
 class _RefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -58,18 +70,24 @@ class RoomSerializer(serializers.ModelSerializer):
         read_only_fields = ("started_at", "ended_at")
 
 
-# ——— Компактная версия для /api/real_schedule/my/ ———
+# ——— Компакт для /api/real_schedule/my/ ———
+# Формат совместим с утилитой: date + start_time (в школьной TZ), PK и слаг type.
 
 class MyRealLessonSerializer(serializers.ModelSerializer):
     """
-    Компактный формат в стиле шаблона:
+    Компактный формат для реального расписания:
       - subject/grade/teacher → PK
       - type → slug LessonType.key
+      - date (YYYY-MM-DD) и start_time (HH:MM:SS) → вычислены из start с учётом школьной TZ
+      - поле 'start' больше не отдаём
     """
     subject = serializers.PrimaryKeyRelatedField(read_only=True)
     grade   = serializers.PrimaryKeyRelatedField(read_only=True)
     teacher = serializers.PrimaryKeyRelatedField(read_only=True)
     type    = serializers.SlugRelatedField(read_only=True, source="lesson_type", slug_field="key")
+
+    date       = serializers.SerializerMethodField()
+    start_time = serializers.SerializerMethodField()
 
     class Meta:
         model = RealLesson
@@ -78,7 +96,21 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
             "subject",
             "grade",
             "teacher",
-            "start",
+            "date",              # ← новая дата встречи (YYYY-MM-DD)
+            "start_time",        # ← локальное время начала (HH:MM:SS)
             "duration_minutes",
             "type",
         )
+
+    def _to_school_tz(self, dt_utc: dt.datetime) -> dt.datetime:
+        if _SCHOOL_TZ:
+            return dt_utc.astimezone(_SCHOOL_TZ)
+        return dt_utc  # fallback (UTC), если ZoneInfo внезапно недоступен
+
+    def get_date(self, obj: RealLesson) -> str:
+        local_dt = self._to_school_tz(obj.start)
+        return local_dt.date().isoformat()  # YYYY-MM-DD
+
+    def get_start_time(self, obj: RealLesson) -> str:
+        local_dt = self._to_school_tz(obj.start)
+        return local_dt.strftime("%H:%M:%S")
