@@ -98,48 +98,67 @@ def update_draft(request):
 def commit_draft(request):
     """
     Применить черновик (публикация как новой активной недели, сброс черновика).
+    'type' маппится в FK на LessonType через регистронезависимый резолвер (key/label).
+    Неизвестный тип -> 400 с подсказкой.
     """
+    from django.db import transaction
+    from rest_framework import status
+    from rest_framework.exceptions import ValidationError
+    from django.utils.timezone import now
+    from django.shortcuts import get_object_or_404
+
+    from .models import TemplateWeekDraft
+    from schedule.core.models import AcademicYear, LessonType
+    from schedule.template.models import TemplateWeek, TemplateLesson
+    from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400  # 👈 ключевое
+
     draft = get_object_or_404(TemplateWeekDraft, user=request.user)
     lessons = (draft.data or {}).get("lessons", [])
 
-    # Деактивируем все недели
-    TemplateWeek.objects.filter(is_active=True).update(is_active=False)
-    # Создаём новую активную неделю
-    week = TemplateWeek.objects.create(
-        name=f"Шаблон от {now().date().isoformat()}",
-        academic_year=draft.base_week.academic_year if draft.base_week else AcademicYear.objects.first(),
-        is_active=True,
-        description="Опубликовано пользователем {}".format(request.user.username)
-    )
-    print("🔥 COMMIT LESSONS:", lessons)
+    # Сделаем всё атомарно
+    with transaction.atomic():
+        # Деактивируем все недели
+        TemplateWeek.objects.filter(is_active=True).update(is_active=False)
 
-    for l in lessons:
-        # Определяем type_id: сначала берем явный, иначе ищем по ключу
-        type_id = l.get("type_id")
-        if not type_id:
-            type_key = l.get("type")
-            if type_key:
-                try:
-                    type_id = LessonType.objects.only("id").get(key=type_key).id
-                except LessonType.DoesNotExist:
-                    type_id = None  # оставим пустым, если указан неизвестный ключ
-
-        TemplateLesson.objects.create(
-            template_week=week,
-            grade_id=l["grade"],
-            subject_id=l["subject"],
-            teacher_id=l["teacher"],
-            day_of_week=l["day_of_week"],
-            start_time=l["start_time"],
-            duration_minutes=l["duration_minutes"],
-            type_id=type_id  # теперь сохраняем тип, если удалось определить
+        # Создаём новую активную неделю
+        week = TemplateWeek.objects.create(
+            name=f"Шаблон от {now().date().isoformat()}",
+            academic_year=draft.base_week.academic_year if draft.base_week else AcademicYear.objects.first(),
+            is_active=True,
+            description=f"Опубликовано пользователем {request.user.username}"
         )
 
-    # Сброс черновика
-    draft.data = {"lessons": []}
-    draft.change_history = []
-    draft.save()
-    return Response({"detail": "Черновик опубликован. Неделя создана.", "week_id": week.id})
+        for l in lessons:
+            # 1) Если пришёл явный type_id — валидируем существование.
+            type_id = l.get("type_id")
+            lt_obj = None
+            if type_id is not None:
+                lt_obj = LessonType.objects.filter(id=type_id).first()
+                if lt_obj is None:
+                    raise ValidationError({"type": f"LessonType id={type_id} не найден."})
+            else:
+                # 2) Иначе резолвим по 'type' (строка или {key|label}) — регистронезависимо
+                payload = l.get("type", None)
+                lt_obj = get_lesson_type_or_400(payload)  # ← вот наш маппинг
+
+            # Создаём урок (FK поле называется 'type')
+            TemplateLesson.objects.create(
+                template_week=week,
+                grade_id=l["grade"],
+                subject_id=l["subject"],
+                teacher_id=l["teacher"],
+                day_of_week=l["day_of_week"],
+                start_time=l["start_time"],
+                duration_minutes=l["duration_minutes"],
+                type=lt_obj
+            )
+
+        # Сброс черновика
+        draft.data = {"lessons": []}
+        draft.change_history = []
+        draft.save()
+
+    return Response({"detail": "Черновик опубликован. Неделя создана.", "week_id": week.id}, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
