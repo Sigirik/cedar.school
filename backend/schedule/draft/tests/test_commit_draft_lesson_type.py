@@ -8,24 +8,21 @@ from schedule.draft.models import TemplateWeekDraft
 from schedule.template.models import TemplateWeek, TemplateLesson
 
 def _mk_admin():
-    return User.objects.create_superuser(username="admin", password="admin")
+    return User.objects.create_superuser(username="admin", password="Ced@rAdm1n")
 
 def _mk_types():
     LessonType.objects.create(key="lecture", label="Лекция", counts_towards_norm=True)
     LessonType.objects.create(key="lab",     label="Лабораторная", counts_towards_norm=True)
 
-def _mk_draft_with_lesson(type_payload):
-    # Черновик с одним уроком; структура подстройте к своей, но принцип такой:
+def _mk_draft_with_lesson(lesson_type, user):
     data = {
-        "lessons": [
-            {
-                "subject": 1, "grade": 1, "teacher": 1,
-                "day_of_week": 0, "start_time": "09:00", "duration_minutes": 45,
-                "type": type_payload
-            }
-        ]
+        "lessons": [{
+            "subject": 1, "grade": 1, "teacher": 1,
+            "day_of_week": 0, "start_time": "09:00",
+            "duration_minutes": 45, "type": lesson_type
+        }]
     }
-    return TemplateWeekDraft.objects.create(data=data)
+    return TemplateWeekDraft.objects.create(user=user, data=data)
 
 def _commit(client, draft_id):
     url = f"/api/draft/template-drafts/{draft_id}/commit/"
@@ -34,7 +31,7 @@ def _commit(client, draft_id):
 def test_commit_maps_type_by_key(db):
     _mk_types()
     admin = _mk_admin()
-    draft = _mk_draft_with_lesson({"key": "lecture"})
+    draft = _mk_draft_with_lesson({"key": "lecture"}, user=admin)
 
     client = APIClient()
     client.force_authenticate(user=admin)
@@ -50,7 +47,7 @@ def test_commit_maps_type_by_key(db):
 def test_commit_maps_type_by_label(db):
     _mk_types()
     admin = _mk_admin()
-    draft = _mk_draft_with_lesson({"label": "Лабораторная"})
+    draft = _mk_draft_with_lesson({"label": "Лабораторная"}, user=admin)
 
     client = APIClient()
     client.force_authenticate(user=admin)
@@ -63,7 +60,7 @@ def test_commit_maps_type_by_label(db):
 def test_commit_unknown_type_returns_400(db):
     _mk_types()
     admin = _mk_admin()
-    draft = _mk_draft_with_lesson({"key": "unknown_type"})
+    draft = _mk_draft_with_lesson({"key": "unknown_type"}, user=admin)
 
     client = APIClient()
     client.force_authenticate(user=admin)

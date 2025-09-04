@@ -1,6 +1,7 @@
+# backend/users/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import User, ParentChild
 from schedule.core.models import TeacherAvailability
 
 class TeacherAvailabilityInline(admin.TabularInline):
@@ -35,3 +36,19 @@ class CustomUserAdmin(UserAdmin):
         if obj and obj.role == User.Role.TEACHER:
             inlines.append(TeacherAvailabilityInline(self.model, self.admin_site))
         return inlines
+
+@admin.register(ParentChild)
+class ParentChildAdmin(admin.ModelAdmin):
+    list_display = ("id", "parent", "child", "is_active", "relation", "created_at")
+    list_filter = ("is_active",)
+    search_fields = (
+        "parent__username",
+        "parent__email",
+        "parent__last_name",
+        "parent__first_name",
+        "child__username",
+        "child__email",
+        "child__last_name",
+        "child__first_name",
+    )
+    raw_id_fields = ("parent", "child")
