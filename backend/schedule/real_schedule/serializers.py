@@ -1,42 +1,46 @@
 from __future__ import annotations
 
-import os
 import datetime as dt
 from typing import Optional
-from django.conf import settings
+
 from rest_framework import serializers
 
 from schedule.real_schedule.models import RealLesson, Room
 
-try:
-    from zoneinfo import ZoneInfo  # py3.9+
-except Exception:  # pragma: no cover
-    ZoneInfo = None  # на современных образах не понадобится
 
-
-# Школьная TZ: по умолчанию Europe/Amsterdam, можно переопределить
-_SCHOOL_TZ_NAME = getattr(settings, "SCHOOL_TIME_ZONE", None) or os.getenv("SCHOOL_TZ", "Europe/Amsterdam")
-_SCHOOL_TZ = ZoneInfo(_SCHOOL_TZ_NAME) if ZoneInfo else None
-
-
-# ——— Сериализаторы, используемые другими эндпойнтами (оставляем как были) ———
+# ——— Вспомогательные мини-сериализаторы ———
 
 class _RefSerializer(serializers.Serializer):
+    """Унифицированный вид для справочников: {id, name}"""
     id = serializers.IntegerField()
     name = serializers.CharField()
+
+
+class _TeacherRefSerializer(serializers.Serializer):
+    """Учитель: {id, fio} (короткое ФИО или username)"""
+    id = serializers.IntegerField()
+    fio = serializers.CharField()
+
 
 class _LessonTypeRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     key = serializers.CharField()
     label = serializers.CharField()
 
+
+# ——— Основные сериализаторы, используемые за пределами /my/ ———
+
 class RealLessonSerializer(serializers.ModelSerializer):
-    """ Полная версия для generate/conduct и пр. """
+    """
+    Полный сериализатор RealLesson для уже существующих эндпойнтов (generate, conduct, и т.п.)
+    Сохранил состав полей максимально консервативным.
+    """
     end = serializers.SerializerMethodField()
+    # ВАЖНО: не указываем source='subject'|'grade'|'lesson_type' — это ломает DRF 3.16+
     subject = _RefSerializer(read_only=True)
     grade = _RefSerializer(read_only=True)
-    lesson_type = _LessonTypeRefSerializer(read_only=True)
     teacher = serializers.SerializerMethodField()
+    lesson_type = _LessonTypeRefSerializer(read_only=True)
 
     class Meta:
         model = RealLesson
@@ -51,14 +55,18 @@ class RealLessonSerializer(serializers.ModelSerializer):
             "lesson_type",
             "topic_order",
             "topic_title",
+            # Ниже поля оставлены только те, что точно существуют в модели.
+            # Если в твоей модели есть дополнительные (ktp_entry и пр.) — можно добавить здесь.
         )
 
     def get_end(self, obj: RealLesson) -> str:
         end_dt = obj.start + dt.timedelta(minutes=obj.duration_minutes or 0)
+        # единый ISO8601 с Z для UTC
         return end_dt.isoformat().replace("+00:00", "Z")
 
     def get_teacher(self, obj: RealLesson) -> dict:
         t = obj.teacher
+        # поддержка короткого ФИО, если есть
         fio = getattr(t, "short_fio", None) or getattr(t, "username", None) or str(t)
         return {"id": getattr(t, "id", None), "fio": fio}
 
@@ -70,24 +78,15 @@ class RoomSerializer(serializers.ModelSerializer):
         read_only_fields = ("started_at", "ended_at")
 
 
-# ——— Компакт для /api/real_schedule/my/ ———
-# Формат совместим с утилитой: date + start_time (в школьной TZ), PK и слаг type.
+# ——— Компактный сериализатор для /api/real_schedule/my/ ———
 
 class MyRealLessonSerializer(serializers.ModelSerializer):
-    """
-    Компактный формат для реального расписания:
-      - subject/grade/teacher → PK
-      - type → slug LessonType.key
-      - date (YYYY-MM-DD) и start_time (HH:MM:SS) → вычислены из start с учётом школьной TZ
-      - поле 'start' больше не отдаём
-    """
-    subject = serializers.PrimaryKeyRelatedField(read_only=True)
-    grade   = serializers.PrimaryKeyRelatedField(read_only=True)
-    teacher = serializers.PrimaryKeyRelatedField(read_only=True)
-    type    = serializers.SlugRelatedField(read_only=True, source="lesson_type", slug_field="key")
-
-    date       = serializers.SerializerMethodField()
-    start_time = serializers.SerializerMethodField()
+    end = serializers.SerializerMethodField()
+    subject = _RefSerializer(read_only=True)
+    grade = _RefSerializer(read_only=True)
+    teacher = serializers.SerializerMethodField()
+    lesson_type = _LessonTypeRefSerializer(read_only=True)
+    room = serializers.SerializerMethodField()
 
     class Meta:
         model = RealLesson
@@ -96,21 +95,42 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
             "subject",
             "grade",
             "teacher",
-            "date",              # ← новая дата встречи (YYYY-MM-DD)
-            "start_time",        # ← локальное время начала (HH:MM:SS)
+            "start",
             "duration_minutes",
-            "type",
+            "end",
+            "lesson_type",
+            "topic_order",
+            "topic_title",
+            "room",
         )
 
-    def _to_school_tz(self, dt_utc: dt.datetime) -> dt.datetime:
-        if _SCHOOL_TZ:
-            return dt_utc.astimezone(_SCHOOL_TZ)
-        return dt_utc  # fallback (UTC), если ZoneInfo внезапно недоступен
+    def get_end(self, obj: RealLesson) -> str:
+        end_dt = obj.start + dt.timedelta(minutes=obj.duration_minutes or 0)
+        return end_dt.isoformat().replace("+00:00", "Z")
 
-    def get_date(self, obj: RealLesson) -> str:
-        local_dt = self._to_school_tz(obj.start)
-        return local_dt.date().isoformat()  # YYYY-MM-DD
+    def get_teacher(self, obj: RealLesson) -> dict:
+        t = obj.teacher
+        fio = getattr(t, "short_fio", None) or getattr(t, "username", None) or str(t)
+        return {"id": getattr(t, "id", None), "fio": fio}
 
-    def get_start_time(self, obj: RealLesson) -> str:
-        local_dt = self._to_school_tz(obj.start)
-        return local_dt.strftime("%H:%M:%S")
+    def get_room(self, obj: RealLesson) -> Optional[dict]:
+        """
+        Аккуратно берём комнату без предположений о related_name.
+        Возвращаем только lite-набор полей, нужный фронту.
+        """
+        # Пытаемся через commonly used related_name
+        room = getattr(obj, "room", None)
+        if room is None:
+            # fallback: первый Room по FK lesson
+            try:
+                room = Room.objects.filter(lesson=obj).first()
+            except Exception:
+                room = None
+
+        if not room:
+            return None
+
+        return {
+            "provider": getattr(room, "provider", None),
+            "join_url": getattr(room, "join_url", None),
+        }

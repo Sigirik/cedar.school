@@ -27,7 +27,7 @@ urlpatterns = [
     # Аутентификация Djoser + JWT (логин/рефреш/текущий пользователь)
     #   POST /api/auth/jwt/create/
     #   POST /api/auth/jwt/refresh/
-    #   GET /api/auth/users/me/
+    #   GET  /api/auth/users/me/
     path("api/auth/", include("djoser.urls")),
     path("api/auth/", include("djoser.urls.jwt")),
 

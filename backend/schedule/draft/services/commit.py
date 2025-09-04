@@ -2,39 +2,25 @@ import logging
 from django.utils import timezone
 from django.db import transaction
 
-from schedule.template.models import TemplateLesson, TemplateWeek
+from schedule.template.models import TemplateWeek
 from schedule.template.serializers import TemplateLessonWriteSerializer  # ← ДОЛЖЕН БЫТЬ
-from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400
 
 logger = logging.getLogger("cedar.draft.commit")
 
 
 def commit_draft_to_template(draft_obj):
+    """
+    Публикует активный черновик в TemplateWeek и создаёт TemplateLesson'ы через
+    TemplateLessonWriteSerializer. Поле 'type' из черновика маппится в FK 'type'.
+    """
     data = (getattr(draft_obj, "data", {}) or {})
     lessons = data.get("lessons", [])
-    week = TemplateWeek.objects.create(name="Draft ...")
 
-    with transaction.atomic():
-        for d in lessons:
-            lt = get_lesson_type_or_400(d.get("type"))  # ← вот он, маппинг
-            ser = TemplateLessonWriteSerializer(data=d)
-            ser.is_valid(raise_exception=True)
+    week = TemplateWeek.objects.create(name=f"Draft {timezone.now():%Y-%m-%d %H:%M}")
 
-            # Охранник входа: поле type присутствует?
-            if "type" not in ser.initial_data:
-                raise ValueError("commit_draft: no 'type' in lesson data before save")
+    create_template_lessons_from_draft(draft_obj, week)  # ← Оставляем ТОЛЬКО ЭТОТ путь
 
-            obj = ser.save(template_week=week)
-
-            # Охранник выхода: FK проставлен?
-            if not getattr(obj, "type_id", None):
-                raise ValueError("commit_draft: type_id is None after serializer.save()")
-            TemplateLesson.objects.create(
-                template_week=week,
-                subject_id=d["subject"], grade_id=d["grade"], teacher_id=d["teacher"],
-                day_of_week=d["day_of_week"], start_time=d["start_time"], duration_minutes=d["duration_minutes"],
-                type=lt,  # ← FK в поле модели называется `type`
-            )
+    logger.info("commit_draft: published week id=%s; lessons=%s", week.id, len(lessons))
     return week
 
 
