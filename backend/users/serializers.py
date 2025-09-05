@@ -161,4 +161,4 @@ class PasswordResetUsernameEmailSerializer(serializers.Serializer):
         return None
 
 class SetRoleSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(choices=["ADMIN","DIRECTOR","HEAD_TEACHER","TEACHER","STUDENT"])
+    role = serializers.ChoiceField(choices=["ADMIN","DIRECTOR","HEAD_TEACHER","TEACHER","STUDENT","PARENT","AUDITOR"])
