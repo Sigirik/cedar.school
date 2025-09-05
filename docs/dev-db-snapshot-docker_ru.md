@@ -14,10 +14,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 docker compose exec backend bash -lc "python manage.py sanitize_for_snapshot --password pass12345"
 
 # (3) Экспорт снапшота (остановит backend, скопирует БД, запустит обратно)
-.ackend\scripts\db-export.ps1 -Docker
+.\backend\scripts\db-export.ps1 -Docker
 
 # или с кастомным именем файла:
-.ackend\scripts\db-export.ps1 -Docker -SnapshotPath "seeds/cedar_2025-09-05.sqlite3"
+.\backend\scripts\db-export.ps1 -Docker -SnapshotPath "seeds/cedar_2025-09-05.sqlite3"
 ```
 
 ---
@@ -29,13 +29,13 @@ docker compose exec backend bash -lc "python manage.py sanitize_for_snapshot --p
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 # Базовый случай (по умолчанию берётся seeds/cedar_dev.sqlite3)
-.ackend\scripts\db-import.ps1 -Docker
+.\backend\scripts\db-import.ps1 -Docker
 
 # Если используешь другой снимок:
-.ackend\scripts\db-import.ps1 -Docker -SnapshotPath "seeds/cedar_2025-09-05.sqlite3"
+.\backend\scripts\db-import.ps1 -Docker -SnapshotPath "seeds/cedar_2025-09-05.sqlite3"
 
 # Если точно не хочешь гонять миграции после импорта:
-.ackend\scripts\db-import.ps1 -Docker -SkipMigrate
+.\backend\scripts\db-import.ps1 -Docker -SkipMigrate
 ```
 
 ---
