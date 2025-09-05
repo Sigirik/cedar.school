@@ -1,18 +1,7 @@
-# schedule/draft/views.py
 """
-Функции для управления единственным активным черновиком недели (TemplateWeekDraft).
-Поддерживает:
-  - GET    /api/draft/template-drafts/                     → get_or_create_draft
-  - POST   /api/draft/template-drafts/from-template/       → create_draft_from_template
-  - POST   /api/draft/template-drafts/empty/               → create_empty_draft
-  - PATCH  /api/draft/template-drafts/                     → update_draft
-  - POST   /api/draft/template-drafts/commit/              → commit_draft (черновик текущего пользователя)
-  - POST   /api/draft/template-drafts/<int:draft_id>/commit/ → commit_draft (указанный черновик; доступ админам/владельцу)
-  - GET    /api/draft/template-drafts/exists/              → draft_exists
-  - POST   /api/draft/template-drafts/validate/            → validate_draft
+schedule/draft/views.py
+Функции для управления единственным активным черновиком недели.
 """
-
-from __future__ import annotations
 
 from datetime import date as _date, time as _time
 
@@ -35,18 +24,21 @@ from schedule.core.models import AcademicYear, LessonType, Grade, Subject
 from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400
 from schedule.template.models import TemplateWeek, TemplateLesson
 from schedule.validators.schedule_rules import check_collisions
+<<<<<<< Updated upstream
+from rest_framework import status
+=======
 
 
-# =====================================================
+# -----------------------------------------------------
 # Вспомогательные
-# =====================================================
+# -----------------------------------------------------
 
 def _parse_time(v):
     if v is None:
         return None
     if isinstance(v, str):
         try:
-            hh, mm = v.split(":", 1)
+            hh, mm = v.split(":")[:2]
             return _time(int(hh), int(mm))
         except Exception:
             return None
@@ -66,9 +58,10 @@ def _ensure_fk_rows(grade_id: int | None, subject_id: int | None, teacher_id: in
         User.objects.create(pk=teacher_id, username=f"teacher{teacher_id}", role=User.Role.TEACHER)
 
 
-# =====================================================
+# -----------------------------------------------------
 # Черновики
-# =====================================================
+# -----------------------------------------------------
+>>>>>>> Stashed changes
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -144,7 +137,7 @@ def create_empty_draft(request):
 def update_draft(request):
     """
     Обновить существующий черновик (заменяет lessons целиком).
-    Ожидает payload: {"data": {"lessons": [...]} }
+    Ожидает payload вида: {"data": {"lessons": [...]} }
     """
     draft = get_object_or_404(TemplateWeekDraft, user=request.user)
     new_data = request.data.get('data', {})
@@ -158,22 +151,62 @@ def update_draft(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def commit_draft(request, draft_id: int | None = None):
+def commit_draft(request):
     """
+<<<<<<< Updated upstream
     Применить черновик (публикация как новой активной недели, сброс черновика).
-
-    Поддерживает:
-      - POST /template-drafts/commit/                → берёт черновик по текущему пользователю
-      - POST /template-drafts/<id>/commit/           → коммитит указанный черновик (для владельца или админ-ролей)
-
-    Успешный ответ: 200 OK (как ждут тесты).
     """
-    # --- выбор черновика
+    draft = get_object_or_404(TemplateWeekDraft, user=request.user)
+    lessons = (draft.data or {}).get("lessons", [])
+
+    # Деактивируем все недели
+    TemplateWeek.objects.filter(is_active=True).update(is_active=False)
+    # Создаём новую активную неделю
+    week = TemplateWeek.objects.create(
+        name=f"Шаблон от {now().date().isoformat()}",
+        academic_year=draft.base_week.academic_year if draft.base_week else AcademicYear.objects.first(),
+        is_active=True,
+        description="Опубликовано пользователем {}".format(request.user.username)
+    )
+    print("🔥 COMMIT LESSONS:", lessons)
+
+    for l in lessons:
+        # Определяем type_id: сначала берем явный, иначе ищем по ключу
+        type_id = l.get("type_id")
+        if not type_id:
+            type_key = l.get("type")
+            if type_key:
+                try:
+                    type_id = LessonType.objects.only("id").get(key=type_key).id
+                except LessonType.DoesNotExist:
+                    type_id = None  # оставим пустым, если указан неизвестный ключ
+
+        TemplateLesson.objects.create(
+            template_week=week,
+            grade_id=l["grade"],
+            subject_id=l["subject"],
+            teacher_id=l["teacher"],
+            day_of_week=l["day_of_week"],
+            start_time=l["start_time"],
+            duration_minutes=l["duration_minutes"],
+            type_id=type_id  # теперь сохраняем тип, если удалось определить
+        )
+
+    # Сброс черновика
+    draft.data = {"lessons": []}
+    draft.change_history = []
+    draft.save()
+    return Response({"detail": "Черновик опубликован. Неделя создана.", "week_id": week.id})
+=======
+    Применить черновик (публикация как новой активной недели).
+      - POST /template-drafts/commit/
+      - POST /template-drafts/<id>/commit/
+    Успех -> 200 OK (как ждут тесты).
+    """
+    # 1) Выбираем черновик: свой или (для админ-ролей) по id
     if draft_id is not None:
         draft = get_object_or_404(TemplateWeekDraft, pk=draft_id)
-        admin_roles = {
-            User.Role.ADMIN, User.Role.DIRECTOR, User.Role.HEAD_TEACHER, User.Role.AUDITOR
-        }
+        admin_roles = {User.Role.ADMIN, User.Role.DIRECTOR, User.Role.HEAD_TEACHER, User.Role.AUDITOR}
         if draft.user_id != request.user.id and request.user.role not in admin_roles:
             return Response({"detail": "FORBIDDEN"}, status=status.HTTP_403_FORBIDDEN)
     else:
@@ -182,10 +215,9 @@ def commit_draft(request, draft_id: int | None = None):
     lessons = (draft.data or {}).get("lessons", [])
 
     with transaction.atomic():
-        # деактивируем прошлые недели
+        # 2) Деактивируем прежние недели и создаём новую активную
         TemplateWeek.objects.filter(is_active=True).update(is_active=False)
 
-        # AcademicYear обязателен; если ни одного года нет — пытаемся найти текущий/последний, иначе создаём "текущий".
         ay = (
             draft.base_week.academic_year if draft.base_week
             else AcademicYear.objects.filter(is_current=True).first()
@@ -200,7 +232,6 @@ def commit_draft(request, draft_id: int | None = None):
                 end_date=_date(today.year, 12, 31),
             )
 
-        # создаём новую активную неделю
         week = TemplateWeek.objects.create(
             name=f"Шаблон от {now().date().isoformat()}",
             academic_year=ay,
@@ -208,13 +239,13 @@ def commit_draft(request, draft_id: int | None = None):
             description=f"Опубликовано пользователем {request.user.username}",
         )
 
-        # переносим уроки с резолвом типа и гарантией существования FK
+        # 3) Копируем уроки с резолвом типа и гарантией существования FK
         for l in lessons:
             grade_id = l.get("grade") or l.get("grade_id")
             subject_id = l.get("subject") or l.get("subject_id")
             teacher_id = l.get("teacher") or l.get("teacher_id")
 
-            # тип: поддерживаем type_id ИЛИ объект {"key": ...} / {"label": ...} ИЛИ просто строку-ключ
+            # тип: поддерживаем type_id ИЛИ объект {"key": ...} / {"label": ...}
             type_id = l.get("type_id")
             if type_id is not None:
                 lt_obj = LessonType.objects.filter(id=type_id).first()
@@ -233,16 +264,16 @@ def commit_draft(request, draft_id: int | None = None):
                 day_of_week=l["day_of_week"],
                 start_time=_parse_time(l.get("start_time")),
                 duration_minutes=l["duration_minutes"],
-                type=lt_obj,  # поле в модели называется 'type'; для тестов есть alias-свойство .lesson_type
+                type=lt_obj,  # поле в модели называется 'type'; у неё может быть alias-свойство lesson_type
             )
 
-        # сбрасываем черновик
+        # 4) Очищаем черновик
         draft.data = {"lessons": []}
         draft.change_history = []
         draft.save()
 
-    # тест ожидает 200 OK (не 201)
     return Response({"detail": "Черновик опубликован", "week_id": week.id}, status=status.HTTP_200_OK)
+>>>>>>> Stashed changes
 
 
 @api_view(['GET'])
@@ -267,7 +298,7 @@ def validate_draft(request):
     return Response(
         {
             "lessons": lessons,
-            # ожидаемый формат: [{ type, resource_id?, weekday?, lesson_ids, severity, message }]
+            # ожидаемый формát: [{ type, resource_id?, weekday?, lesson_ids, severity, message }]
             "collisions": collisions,
         },
         status=status.HTTP_200_OK,
