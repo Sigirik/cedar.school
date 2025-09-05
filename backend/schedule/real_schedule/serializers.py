@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import datetime as dt
 from typing import Optional
-
+from django.utils import timezone
+from django.utils.timezone import localtime, is_aware
 from rest_framework import serializers
+from zoneinfo import ZoneInfo
 
 from schedule.real_schedule.models import RealLesson, Room
 
@@ -27,7 +29,14 @@ class _LessonTypeRefSerializer(serializers.Serializer):
     key = serializers.CharField()
     label = serializers.CharField()
 
-
+def _local_dt(dt):
+    if dt is None:
+        return None
+    try:
+        return localtime(dt) if is_aware(dt) else dt
+    except Exception:
+        # на всякий случай не падаем из-за неправильных tz
+        return dt
 # ——— Основные сериализаторы, используемые за пределами /my/ ———
 
 class RealLessonSerializer(serializers.ModelSerializer):
@@ -81,12 +90,16 @@ class RoomSerializer(serializers.ModelSerializer):
 # ——— Компактный сериализатор для /api/real_schedule/my/ ———
 
 class MyRealLessonSerializer(serializers.ModelSerializer):
-    end = serializers.SerializerMethodField()
-    subject = _RefSerializer(read_only=True)
-    grade = _RefSerializer(read_only=True)
-    teacher = serializers.SerializerMethodField()
-    lesson_type = _LessonTypeRefSerializer(read_only=True)
-    room = serializers.SerializerMethodField()
+    subject = serializers.IntegerField(source="subject_id")
+    grade = serializers.IntegerField(source="grade_id")
+    teacher = serializers.IntegerField(source="teacher_id")
+
+    # было: type = _LessonTypeRefSerializer(read_only=True)
+    # стало: ключ типа (str), берём из lesson_type.key
+    type = serializers.SerializerMethodField()
+
+    date = serializers.SerializerMethodField()
+    start_time = serializers.SerializerMethodField()
 
     class Meta:
         model = RealLesson
@@ -95,42 +108,43 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
             "subject",
             "grade",
             "teacher",
-            "start",
+            "date",
+            "start_time",
             "duration_minutes",
-            "end",
-            "lesson_type",
-            "topic_order",
-            "topic_title",
+            "type",
             "room",
         )
 
-    def get_end(self, obj: RealLesson) -> str:
-        end_dt = obj.start + dt.timedelta(minutes=obj.duration_minutes or 0)
-        return end_dt.isoformat().replace("+00:00", "Z")
+    def _get_target_tz(self) -> ZoneInfo:
+        # Можно будет расширить: взять user.profile.timezone или заголовок X-TZ
+        tz_name = (self.context or {}).get("tz") or "Europe/Amsterdam"
+        try:
+            return ZoneInfo(tz_name)
+        except Exception:
+            return ZoneInfo("Europe/Amsterdam")
 
-    def get_teacher(self, obj: RealLesson) -> dict:
-        t = obj.teacher
-        fio = getattr(t, "short_fio", None) or getattr(t, "username", None) or str(t)
-        return {"id": getattr(t, "id", None), "fio": fio}
-
-    def get_room(self, obj: RealLesson) -> Optional[dict]:
-        """
-        Аккуратно берём комнату без предположений о related_name.
-        Возвращаем только lite-набор полей, нужный фронту.
-        """
-        # Пытаемся через commonly used related_name
-        room = getattr(obj, "room", None)
-        if room is None:
-            # fallback: первый Room по FK lesson
-            try:
-                room = Room.objects.filter(lesson=obj).first()
-            except Exception:
-                room = None
-
-        if not room:
+    def get_date(self, obj):
+        dt = obj.start
+        if dt is None:
             return None
+        if is_aware(dt):
+            dt = dt.astimezone(self._get_target_tz())
+        return dt.date().isoformat()
 
-        return {
-            "provider": getattr(room, "provider", None),
-            "join_url": getattr(room, "join_url", None),
-        }
+    def get_start_time(self, obj):
+        dt = obj.start
+        if dt is None:
+            return None
+        if is_aware(dt):
+            dt = dt.astimezone(self._get_target_tz())
+        return dt.time().isoformat()
+
+    def get_type(self, obj):
+        lt = getattr(obj, "lesson_type", None)
+        return getattr(lt, "key", None) if lt else None
+
+    def get_room(self, obj):
+        r = getattr(obj, "room", None)
+        if not r:
+            return None
+        return {"provider": getattr(r, "provider", None), "join_url": getattr(r, "join_url", None)}
