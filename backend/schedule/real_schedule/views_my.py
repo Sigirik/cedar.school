@@ -15,7 +15,6 @@ from schedule.core.services.date_windows import (
     validate_and_materialize_range,
 )
 
-# Админские роли видят всё
 ALLOWED_ADMIN_ROLES = {
     User.Role.ADMIN,
     User.Role.DIRECTOR,
@@ -24,12 +23,6 @@ ALLOWED_ADMIN_ROLES = {
 }
 
 def _filter_for_student(queryset, student: "User"):
-    """
-    Возвращает queryset RealLesson, отфильтрованный для конкретного ученика.
-    Логика:
-      - если у ученика включён режим индивидуальных предметов -> фильтруем только по предметам (grade игнорируем);
-      - иначе -> фильтруем по классам ученика (классы берём из StudentSubject).
-    """
     if getattr(student, "individual_subjects_enabled", False):
         subject_ids = (StudentSubject.objects
                        .filter(student=student)
@@ -41,26 +34,20 @@ def _filter_for_student(queryset, student: "User"):
                  .filter(student=student)
                  .values_list("grade_id", flat=True)
                  .distinct())
-
     return queryset.filter(grade_id__in=grade_ids) if grade_ids else queryset.none()
 
 
 class MyScheduleView(APIView):
-    """
-    GET /api/real_schedule/my/?from=&to=
-    Правила доступа: IsAuthenticated. Фильтрация по роли.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user: User = request.user
 
-        # Параметры периода
         raw_from = request.query_params.get("from")
         raw_to = request.query_params.get("to")
 
         if not raw_from and not raw_to:
-            d_from, d_to = get_default_school_week()  # (date, date)
+            d_from, d_to = get_default_school_week()
         else:
             d_from, d_to = parse_from_to_dates(raw_from, raw_to)
 
@@ -69,7 +56,6 @@ class MyScheduleView(APIView):
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
 
-        # Базовая выборка
         qs = (
             RealLesson.objects
             .select_related("subject", "grade", "teacher", "lesson_type")
@@ -77,11 +63,9 @@ class MyScheduleView(APIView):
             .order_by("start", "grade_id")
         )
 
-        # Ролевая фильтрация
         role = user.role
-
         if role in ALLOWED_ADMIN_ROLES:
-            pass  # админы видят всё
+            pass
 
         elif role == User.Role.TEACHER:
             qs = qs.filter(teacher_id=user.id)
@@ -90,9 +74,7 @@ class MyScheduleView(APIView):
             qs = _filter_for_student(qs, user)
 
         elif role == User.Role.PARENT:
-            # Агрегируем расписание детей (по связкам ParentChild); поддерживаем ?children=1,2
-            from users.models import ParentChild  # локальный импорт, чтобы не плодить циклы
-
+            from users.models import ParentChild
             links = (
                 ParentChild.objects
                 .filter(parent=user, is_active=True)
@@ -106,12 +88,11 @@ class MyScheduleView(APIView):
                     allowed_ids = {int(x) for x in children_param.split(",") if x.strip().isdigit()}
                     children = [c for c in children if c.id in allowed_ids]
                 except Exception:
-                    pass  # игнорируем некорректный параметр
+                    pass
 
             if not children:
                 qs = qs.none()
             else:
-                # Объединяем по PK уроков, прошедших фильтрацию для каждого ребёнка
                 cond = Q()
                 base = RealLesson.objects.filter(start__gte=from_dt, start__lt=to_dt_excl)
                 for child in children:
@@ -124,11 +105,6 @@ class MyScheduleView(APIView):
 
         data = MyRealLessonSerializer(qs, many=True).data
         return Response(
-            {
-                "from": d_from.isoformat(),
-                "to": d_to.isoformat(),
-                "count": len(data),
-                "results": data,
-            },
+            {"from": d_from.isoformat(), "to": d_to.isoformat(), "count": len(data), "results": data},
             status=200,
         )

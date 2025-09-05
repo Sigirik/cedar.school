@@ -2,7 +2,6 @@
 schedule/draft/views.py
 Функции для управления единственным активным черновиком недели.
 """
-
 from datetime import date as _date, time as _time
 
 from django.db import transaction
@@ -24,9 +23,11 @@ from schedule.core.models import AcademicYear, LessonType, Grade, Subject
 from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400
 from schedule.template.models import TemplateWeek, TemplateLesson
 from schedule.validators.schedule_rules import check_collisions
-from rest_framework import status
 
 
+# -----------------------------------------------------
+# Вспомогательные
+# -----------------------------------------------------
 def _parse_time(v):
     if v is None:
         return None
@@ -55,24 +56,16 @@ def _ensure_fk_rows(grade_id: int | None, subject_id: int | None, teacher_id: in
 # -----------------------------------------------------
 # Черновики
 # -----------------------------------------------------
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_or_create_draft(request):
-    """
-    Получить или создать единственный черновик для пользователя.
-    """
     draft, _ = TemplateWeekDraft.objects.get_or_create(user=request.user)
-    serializer = TemplateWeekDraftSerializer(draft)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(TemplateWeekDraftSerializer(draft).data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_draft_from_template(request):
-    """
-    Создать новый черновик на основе указанной шаблонной недели (или активной, если не указано).
-    """
     template_id = request.data.get('template_id')
     if template_id:
         template = get_object_or_404(TemplateWeek, pk=template_id)
@@ -81,10 +74,8 @@ def create_draft_from_template(request):
         if not template:
             return Response({"detail": "Нет активной недели"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Удаляем старый черновик пользователя
     TemplateWeekDraft.objects.filter(user=request.user).delete()
 
-    # Плоский набор уроков
     lessons = TemplateLesson.objects.filter(template_week=template).select_related("type")
     lessons_data = []
     for l in lessons:
@@ -95,7 +86,6 @@ def create_draft_from_template(request):
             "day_of_week": l.day_of_week,
             "start_time": l.start_time.strftime("%H:%M") if l.start_time else None,
             "duration_minutes": l.duration_minutes,
-            # сохраняем как объект, чтобы потом можно было маппить по key/label
             "type": ({"key": l.type.key, "label": l.type.label} if l.type_id else None),
         })
 
@@ -103,55 +93,42 @@ def create_draft_from_template(request):
         user=request.user,
         base_week=template,
         data={"lessons": lessons_data},
-        change_history=[]
+        change_history=[],
     )
-    serializer = TemplateWeekDraftSerializer(draft)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(TemplateWeekDraftSerializer(draft).data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_empty_draft(request):
-    """
-    Создать пустой черновик (без уроков).
-    """
     TemplateWeekDraft.objects.filter(user=request.user).delete()
     draft = TemplateWeekDraft.objects.create(
         user=request.user,
         data={"lessons": []},
-        change_history=[]
+        change_history=[],
     )
-    serializer = TemplateWeekDraftSerializer(draft)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(TemplateWeekDraftSerializer(draft).data, status=status.HTTP_200_OK)
 
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_draft(request):
-    """
-    Обновить существующий черновик (заменяет lessons целиком).
-    Ожидает payload вида: {"data": {"lessons": [...]} }
-    """
     draft = get_object_or_404(TemplateWeekDraft, user=request.user)
     new_data = request.data.get('data', {})
-    # простая история изменений
     draft.change_history.append(draft.data)
     draft.data = new_data
     draft.save()
-    serializer = TemplateWeekDraftSerializer(draft)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(TemplateWeekDraftSerializer(draft).data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def commit_draft(request, draft_id=None):
+def commit_draft(request, draft_id: int | None = None):
     """
     Применить черновик (публикация как новой активной недели).
-      - POST /template-drafts/commit/
-      - POST /template-drafts/<id>/commit/
-    Успех -> 200 OK (как ждут тесты).
+    - POST /template-drafts/commit/           — свой черновик
+    - POST /template-drafts/<id>/commit/      — по id (для админ-ролей)
     """
-    # 1) выбираем черновик: свой или (для админ-ролей) по id
     if draft_id is not None:
         draft = get_object_or_404(TemplateWeekDraft, pk=draft_id)
         admin_roles = {User.Role.ADMIN, User.Role.DIRECTOR, User.Role.HEAD_TEACHER, User.Role.AUDITOR}
@@ -163,13 +140,12 @@ def commit_draft(request, draft_id=None):
     lessons = (draft.data or {}).get("lessons", [])
 
     with transaction.atomic():
-        # 2) деактивируем прежние недели и создаём новую активную
         TemplateWeek.objects.filter(is_active=True).update(is_active=False)
 
         ay = (
             draft.base_week.academic_year if draft.base_week
             else AcademicYear.objects.filter(is_current=True).first()
-                 or AcademicYear.objects.order_by("-start_date").first()
+                or AcademicYear.objects.order_by("-start_date").first()
         )
         if ay is None:
             today = now().date()
@@ -187,13 +163,12 @@ def commit_draft(request, draft_id=None):
             description=f"Опубликовано пользователем {request.user.username}",
         )
 
-        # 3) копируем уроки с резолвом типа и гарантией существования FK
         for l in lessons:
             grade_id = l.get("grade") or l.get("grade_id")
             subject_id = l.get("subject") or l.get("subject_id")
             teacher_id = l.get("teacher") or l.get("teacher_id")
 
-            # тип: поддерживаем type_id ИЛИ объект {"key": ...} / {"label": ...}
+            # type: поддерживаем type_id ИЛИ объект {"key": ...} / {"label": ...}
             type_id = l.get("type_id")
             if type_id is not None:
                 lt_obj = LessonType.objects.filter(id=type_id).first()
@@ -215,7 +190,6 @@ def commit_draft(request, draft_id=None):
                 type=lt_obj,
             )
 
-        # 4) очищаем черновик
         draft.data = {"lessons": []}
         draft.change_history = []
         draft.save()
@@ -226,9 +200,6 @@ def commit_draft(request, draft_id=None):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def draft_exists(request):
-    """
-    Быстро проверить, есть ли у пользователя черновик.
-    """
     exists = TemplateWeekDraft.objects.filter(user=request.user).exists()
     return Response({"exists": exists}, status=status.HTTP_200_OK)
 
@@ -236,17 +207,10 @@ def draft_exists(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def validate_draft(request):
-    """
-    Проверка коллизий без коммита. Возвращает уроки + список проблем.
-    """
     draft = get_object_or_404(TemplateWeekDraft, user=request.user)
     lessons = (draft.data or {}).get("lessons", [])
     collisions = check_collisions(lessons)
     return Response(
-        {
-            "lessons": lessons,
-            # ожидаемый формát: [{ type, resource_id?, weekday?, lesson_ids, severity, message }]
-            "collisions": collisions,
-        },
+        {"lessons": lessons, "collisions": collisions},
         status=status.HTTP_200_OK,
     )
