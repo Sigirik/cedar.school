@@ -2,230 +2,171 @@
 
 ## 🚀 Описание
 
-Cedar.school — современная система для планирования, заполнения и визуализации школьного расписания на Django.  
-Включает шаблонные недели, редактор уроков, справочники предметов, классов и учителей, а также роли пользователей.
+Cedar.school — система для планирования и визуализации школьного расписания (Django + DRF backend, React frontend). Поддерживает шаблонные недели, черновики, реальное расписание, КТП, справочники и роли пользователей.
 
 ---
 
-## 📦 Структура API
+## 📚 Документация API (локально в репозитории)
 
-Проект разделён на логические зоны:
+Папка: `docs/API/`
 
-### 🖥 Web-интерфейс (Django views)
-- **URL**: `/schedule/`
-- **Файл маршрутов**: `web_urls.py`
-- **Файл view**: `web_views.py`
-- **Назначение**: страницы с HTML (через `render()`), формы, списки
+- **Auth & Core**  
+  - Док: `docs/API/core.md`
+- **Draft (TemplateWeekDraft)**  
+  - Док: `docs/API/draft.md`
+- **Template (Active Week & Lessons)**  
+  - Док: `docs/API/template.md`
+- **КТП (Календарно-тематический план)**  
+  - Док: `docs/API/ktp.md`
+- **Real Schedule (реальное расписание)**  
+  - Док: `docs/API/real_schedule.md`
+- **Users**
+  - Док: `docs/API/users.md`
 
----
-
-### 📘 Шаблонная неделя
-- **URL-префикс**: `/api/template/`
-- **Файл маршрутов**: `template_api_urls.py`
-- **Файл view**: `template_api_views.py`
-- **Основные эндпоинты**:
-  - `GET template-week/active/` — получить активную шаблонную неделю
-  - `POST template-week/<id>/clone_to_draft/` — скопировать шаблон в черновик
-  - `GET template-week/historical_templates/` — список прошлых версий
+> Все разделы синхронизированы с текущими urls.py/views.py модулей.
 
 ---
 
-### ✏️ Черновики
-- **URL-префикс**: `/api/draft/`
-- **Файл маршрутов**: `draft_api_urls.py`
-- **Файл view**: `draft_api_views.py`
-- **Основные эндпоинты**:
-  - `POST template-drafts/` — создать новый черновик
-  - `POST template-drafts/create-from/<id>/` — создать черновик из шаблона
-  - `POST template-drafts/create-empty/` — создать пустой черновик
-  - `POST template-drafts/<id>/commit/` — утвердить черновик как активный шаблон
+## 🧭 Карта REST API (по модулям)
+
+### Template (шаблонная неделя)
+- Префикс: `/api/template/`
+- `GET /api/template/active-week/` — активная неделя (или 404)【77†source】【78†source】
+- `GET /api/template/weeks/`, `GET /api/template/weeks/:id/` — список/конкретная неделя【77†source】【78†source】
+- CRUD по урокам: `/api/template/templatelesson/` (если зарегистрирован ViewSet)【77†source】
+
+### Draft (черновики шаблонной недели)
+- Префикс: `/api/draft/`
+- Ручки: `template-drafts/`, `create-from/`, `create-empty/`, `update/`, `:draft_id/commit/`, `exists/`, `validate/`【67†source】【68†source】
+
+### Core (справочники)
+- Префикс: `/api/core/`
+- ReadOnly: `grades/`, `subjects/`, `availabilities/`, `weekly-norms/`, `lesson-types`
+- CRUD: `academic-years/`, `grade-subjects/`, `teacher-subjects/`, `teacher-grades/`, `student-subjects/`, `quarters/`, `holidays`
+
+### КТП
+- Префикс: `/api/ktp/`
+- CRUD: `ktptemplate/`, `ktpsection/`, `ktpentry/`【88†source】
+
+### Реальное расписание
+- Префикс: `/api/real_schedule/`
+- `GET /api/real_schedule/my/?from=&to=` — моё расписание (роль-зависимо)【125†source】
+- `POST /api/real_schedule/generate/` — генерация (поддержка template_week_id, rewrite_from, debug)【124†source】
+- `POST /api/real_schedule/lessons/:id/conduct/` — отметить урок проведённым【124†source】
+- `POST /api/real_schedule/rooms/get-or-create/`, `POST /api/real_schedule/rooms/:id/end/` — видеокомнаты【124†source】
+
+### Users
+- Префикс: `/api/`
+- Users (ReadOnly): `GET /api/users/`, `GET /api/users/:id/`
+- Назначение роли: `POST /api/users/:id/set-role/` *(ADMIN, IsAdminRole)*
+- Teachers (ReadOnly): `GET /api/teachers/`, `GET /api/teachers/:id/`
+- Students (ReadOnly): `GET /api/students/`, `GET /api/students/:id/`
+- Role Requests: `GET/POST /api/role-requests/`, `GET /api/role-requests/:id/`, `DELETE /api/role-requests/:id/`
+  - Actions: `GET /api/role-requests/allowed-roles/`, `POST /api/role-requests/:id/approve/`, `POST /api/role-requests/:id/reject/`
+- Текущий пользователь: `GET /api/users/me/` (алиас к Djoser `users/me/`)
+- Регистрация (CSRF-exempt): `POST /api/registration/users/`
+---
+
+## 🔐 Аутентификация
+
+- Djoser + JWT (`/api/auth/`):
+  - `POST /api/auth/jwt/create/` — логин (username/password)
+  - `POST /api/auth/jwt/refresh/` — обновление access-токена
+  - `GET /api/auth/users/me/` — текущий пользователь  
+- В Postman используйте заголовок: `Authorization: Bearer {{access_token}}`  
+- Рекомендуется сохранять токен в Environment переменную `access_token`.
 
 ---
 
-### 📚 КТП и справочники
-- **URL-префикс**: `/api/ktp/`
-- **Файл маршрутов**: `ktp_api_urls.py`
-- **Файл view**: `ktp_api_views.py`
-- **Сущности**:
-  - `ktp-templates/`, `ktp-sections/`, `ktp-entries/`
-  - `subjects/`, `grades/`, `teachers/`, `weekly-norms/`
-  - `teacher-subjects/`, `teacher-grades/`, `grade-subjects/`, `student-subjects/`
-  - `lesson-types/`, `teacher-availabilities/`, `academic-years/`
+## 🚀 Быстрый старт (dev)
+
+```powershell
+# Windows PowerShell
+
+# 1) Запуск
+docker compose up -d --build
+
+# 2) Миграции
+docker compose exec backend bash -lc "python manage.py migrate"
+
+# 3) (Опционально) суперпользователь
+docker compose exec backend bash -lc "python manage.py createsuperuser"
+
+# 4) Smoke-тест JWT авторизации
+$resp = Invoke-RestMethod -Uri "http://localhost:8000/api/auth/jwt/create/" `
+  -Method POST -ContentType "application/json" `
+  -Body '{"username":"admin","password":"admin"}'
+$token = $resp.access
+$headers = @{ Authorization = "Bearer $token" }
+Invoke-RestMethod -Uri "http://localhost:8000/api/core/grades/" -Headers $headers
+```
 
 ---
 
-### 👤 Пользователи и роли
+## 🧩 Postman
 
-- **Файл моделей**: `users/models.py`
-- **Основные роли**: `TEACHER`, `STUDENT`, `PARENT`, `DIRECTOR`, `HEAD_TEACHER`, `ADMIN`, `AUDITOR`
-- **Профиль пользователя**: поддержка поля "отчество", принадлежности к классу, индивидуальных предметов, флаг индивидуального выбора предметов (`individual_subjects_enabled` для учеников)
-- **Сериализация и API**: все сериализаторы пользователей и их связей в `users/serializers.py`, используемые в API
-
----
-
-## ✅ Общие принципы
-- Все API построены на DRF (Django REST Framework)
-- ViewSet'ы регистрируются через `DefaultRouter`
-- Одно namespace = один модуль (web / template / draft / ktp / users)
-- Справочники, связи (учитель-предмет, ученик-предмет, класс-предмет) реализованы в core, доступны через API и в админке
-- Все модели снабжены русскими именами (`verbose_name` и `verbose_name_plural`), для админки и API
+1) Импортируйте коллекции из `docs/API/*.json`.  
+2) Выберите Environment (например, `Local dev`) с переменными:
+   - `baseUrl = http://localhost:8000`
+   - `access_token` (после **Login** в Core сохраняется в *Environment*)  
+3) Порядок:
+   - **Login** (Core) → токен → {{access_token}}
+   - Далее Draft/Template/KTP/Real Schedule работают автоматически.
 
 ---
 
-## 🛠 Автоматическое заполнение базы (seed-скрипты)
+## 🧪 Тесты
 
-- В проекте есть скрипты для быстрого наполнения:
-  - создания типовых учителей, классов, предметов
-  - генерации связей и доступности учителей
-  - заполнения норм и шаблонной недели с уроками
-- Скрипты можно запускать как management commands или через отдельные скрипты с `django.setup()`
-- Пример запуска management-команды:
-  ```sh
-  python manage.py fill_template_week
+```powershell
+# Все тесты backend
+docker compose exec backend bash -lc "pytest -q"
 
-# Первый старт (dev)
-docker compose up --build
+# Запуск одного файла
+docker compose exec backend bash -lc "pytest backend/schedule/real_schedule/tests/test_generate.py -q -k generate"
+```
 
-- Бэкенд автоматически прогонит миграции.
-- Если в БД нет данных, он загрузит seed/dev_seed.json.
-- Повторные запуски сид не перезаливают.
+---
 
-# **DOCKER**
+## 🌿 Git-процесс
 
-## Весь стек
-# запустить (создаст, если ещё нет)
-docker compose up -d
-# остановить (не удаляя)
-docker compose stop
-# перезапустить
-docker compose restart
-# посмотреть состояние
-docker compose ps
-# логи (в реальном времени)
-docker compose logs -f
+- Базовые ветки: `main` (prod) ← `staging` ← `be/test`, `fe/test`
+- Рабочие: `feature/be/<task>` от `be/test`, `feature/fe/<task>` от `fe/test`
+- Маленькие PR (≤300 строк), один смысл
 
-## Только backend
-# запустить только backend (и db подтянется, если нужно)
-docker compose up -d backend
-# остановить только backend
-docker compose stop backend
-# перезапустить только backend
-docker compose restart backend
-# логи backend (последние 200 строк)
-docker compose logs backend --tail 200
-docker compose logs -f backend     # “follow”
-
-## Полная пересборка / пересоздание
-# пересоздать контейнеры без удаления томов (быстро)
-docker compose up -d --force-recreate
-# пересобрать образы (если менялся Dockerfile/requirements)
-docker compose build
-docker compose up -d
-# жёсткая пересборка без кэша
-docker compose build --no-cache
-docker compose up -d
-
-**Алгоритм работы с Git (для двоих)**
-Общие правила
-
-Базовые ветки:
-main (прод) ← staging (сборка) ← be/test и fe/test (интеграция своих PR).
-
-Рабочие ветки всегда из соответствующей test-ветки:
-BE → feature/be/<task> от be/test
-FE → feature/fe/<task> от fe/test
-
-Маленькие PR (≤300 SLOC), один логический смысл.
-
-PowerShell-команды без &&.
-
-# **Для бэкенда**
-0) Сначала приведи рабочее дерево в чистое состояние
-
-Вариант A — сохранить текущие правки:
-
-git add -A
-git commit -m "wip: local changes before switching branches"
-
-
-Вариант B — отложить (stash), если коммитить не хочешь:
-
-git stash push -u -m "temp before switching to staging"
-
-1) Убедись, что be/test свежая
-git checkout be/test
-git pull origin be/test
-
-2) От ветки staging создай промоут-ветку
-git checkout staging
-git pull origin staging
-git checkout -b promote/backend-to-staging-YYYYMMDD
-
-3) Притяни только нужные пути из be/test
-
-(backend целиком + файлы в корне; список можно скорректировать под твой репозиторий)
-
-# из be/test «принеси» каталоги/файлы в текущую ветку
-git checkout be/test -- backend/
-git checkout be/test -- docker-compose.yml
-git checkout be/test -- docker-compose.override.yml
-git checkout be/test -- .gitattributes
-git checkout be/test -- .gitignore
-git checkout be/test -- README.md
-# добавь другие корневые файлы, если нужны: e.g. .env.example, Makefile и т.п.
-
-
-Посмотри, что изменилось:
-
-git status
-git diff --name-only
-
-4) Закоммить и запушить
-git add -A
-git commit -m "promote: backend + root from be/test (exclude frontend)"
-git push -u origin promote/backend-to-staging-YYYYMMDD
-
-### Старая инструкция
-1. Обновиться:
-git fetch origin
+```powershell
 git checkout be/test
 git pull
-2. Создать рабочую ветку:
-git checkout -b feature/be/<task-key>-short
-3. Работать → коммиты:
+git checkout -b feature/be/<task>
+# ... правки ...
 git add -A
-git commit -m "be: <кратко что сделали>"
-git push -u origin feature/be/<task-key>-short
-4. PR → be/test
-Создай PR (GitHub UI или gh pr create --base be/test --head feature/be/<...>).
-В PR — чек-лист (см. ниже шаблон).
-5. После аппрува/CI зелёный → Merge в be/test.
-6. Промоут в staging:
-git checkout staging
-git pull
-git merge be/test
-git push origin staging
-(или PR be/test → staging — если нужно review)
-7. Релиз (когда FE тоже влит в staging и e2e ок):
-PR staging → main, после мержа поставить тег v0.1.0.
+git commit -m "be: <что сделали>"
+git push -u origin feature/be/<task>
+# PR → base: be/test
+```
 
-# **Для фронтенда**
-1. Обновиться:
-git fetch origin
-git checkout fe/test
-git pull
-2. Создать рабочую ветку:
-git checkout -b feature/fe/<task-key>-short
-3. Работать → коммиты:
-git add -A
-git commit -m "fe: <кратко что сделали>"
-git push -u origin feature/fe/<task-key>-short
-4. PR → fe/test (чек-лист ниже).
-5. После аппрува/CI зелёный → Merge в fe/test.
-6. Промоут в staging (когда нужно собрать вместе с BE):
-git checkout staging
-git pull
-git merge fe/test
-git push origin staging
-(или PR fe/test → staging)
-7. Релиз: PR staging → main (совместно с BE).
+---
+
+## 📁 Структура docs
+
+```
+docs/
+└─ API/
+   ├─ core.md
+   ├─ draft.md
+   ├─ template.md
+   ├─ ktp.md
+   ├─ real_schedule.md
+   ├─ Cedar_core_postman_collection.json
+   ├─ Cedar_draft_postman_collection_reuse_env_token.json
+   ├─ Cedar_template_postman_collection.json
+   ├─ Cedar_ktp_postman_collection.json
+   └─ Cedar_real_schedule_postman_collection.json
+```
+
+---
+
+### Ссылки на исходники маршрутов
+
+- real_schedule/urls.py — my, generate, conduct, rooms【123†source】
+- real_schedule/views.py — генерация, проведение, комнаты【124†source】
+- real_schedule/views_my.py — моё расписание【125†source】

@@ -51,6 +51,11 @@ class TemplateLesson(models.Model):
         weekday = WEEKDAYS[self.day_of_week] if self.day_of_week < len(WEEKDAYS) else self.day_of_week
         return f"{self.template_week} | {self.grade} | {weekday} {self.start_time} — {self.subject}"
 
+    @property
+    def lesson_type(self):
+        """Совместимость со старыми вызовами: .lesson_type == .type"""
+        return self.type
+
     def clean(self):
         user = self.teacher
         is_superuser = getattr(user, "is_superuser", False)
@@ -95,3 +100,4 @@ class ActiveTemplateWeek(models.Model):
 
     def __str__(self):
         return f"Активная неделя: {self.template.name}"
+

@@ -1,11 +1,6 @@
-# backend/schedule/real_schedule/views_my.py
 from __future__ import annotations
 
-import datetime as dt
-from typing import Optional, Iterable
-
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -20,13 +15,26 @@ from schedule.core.services.date_windows import (
     validate_and_materialize_range,
 )
 
-
 ALLOWED_ADMIN_ROLES = {
-    getattr(User.Role, "ADMIN", "ADMIN"),
-    getattr(User.Role, "DIRECTOR", "DIRECTOR"),
-    getattr(User.Role, "HEAD_TEACHER", "HEAD_TEACHER"),
-    getattr(User.Role, "AUDITOR", "AUDITOR"),
+    User.Role.ADMIN,
+    User.Role.DIRECTOR,
+    User.Role.HEAD_TEACHER,
+    User.Role.AUDITOR,
 }
+
+def _filter_for_student(queryset, student: "User"):
+    if getattr(student, "individual_subjects_enabled", False):
+        subject_ids = (StudentSubject.objects
+                       .filter(student=student)
+                       .values_list("subject_id", flat=True)
+                       .distinct())
+        return queryset.filter(subject_id__in=subject_ids)
+
+    grade_ids = (StudentSubject.objects
+                 .filter(student=student)
+                 .values_list("grade_id", flat=True)
+                 .distinct())
+    return queryset.filter(grade_id__in=grade_ids) if grade_ids else queryset.none()
 
 
 class MyScheduleView(APIView):
@@ -36,7 +44,7 @@ class MyScheduleView(APIView):
         user: User = request.user
 
         raw_from = request.query_params.get("from")
-        raw_to   = request.query_params.get("to")
+        raw_to = request.query_params.get("to")
 
         if not raw_from and not raw_to:
             d_from, d_to = get_default_school_week()
@@ -56,35 +64,47 @@ class MyScheduleView(APIView):
         )
 
         role = user.role
-
         if role in ALLOWED_ADMIN_ROLES:
             pass
-        elif role == getattr(User.Role, "TEACHER", "TEACHER"):
+
+        elif role == User.Role.TEACHER:
             qs = qs.filter(teacher_id=user.id)
-        elif role == getattr(User.Role, "STUDENT", "STUDENT"):
-            user_grade_id = getattr(user, "grade_id", None)
-            if user_grade_id:
-                qs = qs.filter(grade_id=user_grade_id)
+
+        elif role == User.Role.STUDENT:
+            qs = _filter_for_student(qs, user)
+
+        elif role == User.Role.PARENT:
+            from users.models import ParentChild
+            links = (
+                ParentChild.objects
+                .filter(parent=user, is_active=True)
+                .select_related("child")
+            )
+            children = [ln.child for ln in links]
+
+            children_param = request.query_params.get("children")
+            if children_param:
+                try:
+                    allowed_ids = {int(x) for x in children_param.split(",") if x.strip().isdigit()}
+                    children = [c for c in children if c.id in allowed_ids]
+                except Exception:
+                    pass
+
+            if not children:
+                qs = qs.none()
             else:
-                ss_qs = StudentSubject.objects.filter(student=user)
-                grade_ids = list(ss_qs.values_list("grade_id", flat=True).distinct())
-                if not grade_ids:
-                    qs = qs.none()
-                else:
-                    qs = qs.filter(grade_id__in=grade_ids)
-                    if getattr(user, "individual_subjects_enabled", False):
-                        subj_ids = list(ss_qs.values_list("subject_id", flat=True).distinct())
-                        if subj_ids:
-                            qs = qs.filter(subject_id__in=subj_ids)
-        elif role == getattr(User.Role, "PARENT", "PARENT"):
-            return Response({"detail": "PARENT_CHILD_RELATION_MISSING"}, status=400)
+                cond = Q()
+                base = RealLesson.objects.filter(start__gte=from_dt, start__lt=to_dt_excl)
+                for child in children:
+                    child_pks = _filter_for_student(base, child).values_list("pk", flat=True)
+                    cond |= Q(pk__in=list(child_pks))
+                qs = qs.filter(cond)
+
         else:
             return Response({"detail": "FORBIDDEN"}, status=403)
 
         data = MyRealLessonSerializer(qs, many=True).data
-        return Response({
-            "from": d_from.isoformat(),
-            "to": d_to.isoformat(),
-            "count": len(data),
-            "results": data,
-        }, status=200)
+        return Response(
+            {"from": d_from.isoformat(), "to": d_to.isoformat(), "count": len(data), "results": data},
+            status=200,
+        )
