@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from datetime import timezone as dt_timezone
 # core / ktp
@@ -62,3 +63,30 @@ class Room(models.Model):
 
     def __str__(self):
         return f"{self.provider} room for lesson {self.lesson_id}"
+
+
+class LessonStudent(models.Model):
+    class Status(models.TextChoices):
+        PRESENT = "+",    "Присутствовал"
+        ABSENT  = "-",    "Отсутствовал"
+        LATE    = "late", "Опоздал"
+
+    lesson   = models.ForeignKey("real_schedule.RealLesson", on_delete=models.CASCADE, related_name="lesson_students")
+    student  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lesson_entries")
+
+    status        = models.CharField(max_length=4, choices=Status.choices, null=True, blank=True)
+    late_minutes  = models.PositiveSmallIntegerField(null=True, blank=True)  # для status=late
+    mark          = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True,
+                                        validators=[MinValueValidator(0), MaxValueValidator(10)])  # пример шкалы 0–10
+
+    class Meta:
+        unique_together = ("lesson", "student")
+        indexes = [models.Index(fields=["lesson", "student"])]
+
+    def clean(self):
+        # late → нужно указать минуты; не late → minutes сбрасываем
+        from django.core.exceptions import ValidationError
+        if self.status == self.Status.LATE and (self.late_minutes is None):
+            raise ValidationError({"late_minutes": "Укажите количество минут опоздания."})
+        if self.status != self.Status.LATE:
+            self.late_minutes = None
