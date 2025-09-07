@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 from schedule.real_schedule.models import RealLesson, Room
 from schedule.core.models import StudentSubject
+from users.models import ParentChild
 
 User = get_user_model()
 # ——— Вспомогательные мини-сериализаторы ———
@@ -335,7 +336,10 @@ class LessonDetailSerializer(serializers.ModelSerializer):
             if user.id in related_ids:
                 allowed_ids = {user.id}
         elif role == "PARENT" and user:
-            child_ids = set()
+            child_ids = set(
+                ParentChild.objects.filter(parent=user, is_active=True)
+                .values_list("child_id", flat=True)
+            )
             pp = getattr(user, "parent_profile", None)
             # parent_profile.children (StudentProfile → user_id)
             if pp and hasattr(pp, "children"):

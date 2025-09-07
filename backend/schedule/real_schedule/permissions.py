@@ -1,6 +1,8 @@
 # backend/schedule/real_schedule/permissions.py
 from rest_framework.permissions import BasePermission
+from django.apps import apps
 from schedule.core.models import StudentSubject  # опираемся на ваши справочники
+from users.models import ParentChild                     # <— ДОБАВЬ
 # при желании можно импортировать TeacherGrade/TeacherSubject/GradeSubject,
 # но для доступа учителя они не используются
 
@@ -55,13 +57,14 @@ def _parent_children_ids_and_grades(user):
             child_grade_ids.add(gid)
     return child_ids, child_grade_ids
 
-class CanViewLesson(BasePermission):
-    """
-    Строгие объектные права:
-      - Ученики/родители видят урок только при подписке на предмет (grade+subject) или индивидуальной привязке.
-      - Учителя — только если назначены на урок.
-    """
+def _get_child_ids(parent_user):
+    """Активные дети родителя по модели ParentChild."""
+    return set(
+        ParentChild.objects.filter(parent=parent_user, is_active=True)
+        .values_list("child_id", flat=True)
+    )
 
+class CanViewLesson(BasePermission):
     def has_permission(self, request, view):
         return bool(getattr(request, "user", None) and request.user.is_authenticated)
 
@@ -84,29 +87,39 @@ class CanViewLesson(BasePermission):
             return False
 
         if role == ROLE_STUD:
-            # Подписка ученика на предмет (в рамках класса)
+            # подписка на предмет + класс
             if StudentSubject.objects.filter(
-                student=user,
-                grade_id=lesson.grade_id,
-                subject_id=lesson.subject_id
+                student=user, grade_id=lesson.grade_id, subject_id=lesson.subject_id
             ).exists():
                 return True
-            # Индивидуальная привязка к уроку
+            # индивидуально добавлен
             return _lesson_has_student(lesson, user.id)
 
         if role == ROLE_PAR:
-            child_ids, child_grade_ids = _parent_children_ids_and_grades(user)
-            # Подписка любого ребёнка на предмет этого урока
+            child_ids = _get_child_ids(user)
+            if not child_ids:
+                return False
+
+            # 1) ребёнок подписан на предмет этого урока
             if StudentSubject.objects.filter(
-                student_id__in=list(child_ids) or [-1],
+                student_id__in=child_ids,
                 grade_id=lesson.grade_id,
-                subject_id=lesson.subject_id
+                subject_id=lesson.subject_id,
             ).exists():
                 return True
-            # Индивидуальная привязка ребёнка к уроку
+
+            # 2) ребёнок индивидуально добавлен на урок (LessonStudent / M2M)
+            try:
+                LessonStudent = apps.get_model("real_schedule", "LessonStudent")
+                if LessonStudent.objects.filter(lesson_id=lesson.id, student_id__in=child_ids).exists():
+                    return True
+            except LookupError:
+                pass
+
             for cid in child_ids:
                 if _lesson_has_student(lesson, cid):
                     return True
+
             return False
 
         return False
