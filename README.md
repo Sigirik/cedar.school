@@ -20,6 +20,8 @@ Cedar.school — система для планирования и визуал�
   - Док: `docs/API/ktp.md`
 - **Real Schedule (реальное расписание)**  
   - Док: `docs/API/real_schedule.md`
+- **Users**
+  - Док: `docs/API/users.md`
 
 > Все разделы синхронизированы с текущими urls.py/views.py модулей.
 
@@ -53,6 +55,16 @@ Cedar.school — система для планирования и визуал�
 - `POST /api/real_schedule/lessons/:id/conduct/` — отметить урок проведённым【124†source】
 - `POST /api/real_schedule/rooms/get-or-create/`, `POST /api/real_schedule/rooms/:id/end/` — видеокомнаты【124†source】
 
+### Users
+- Префикс: `/api/`
+- Users (ReadOnly): `GET /api/users/`, `GET /api/users/:id/`
+- Назначение роли: `POST /api/users/:id/set-role/` *(ADMIN, IsAdminRole)*
+- Teachers (ReadOnly): `GET /api/teachers/`, `GET /api/teachers/:id/`
+- Students (ReadOnly): `GET /api/students/`, `GET /api/students/:id/`
+- Role Requests: `GET/POST /api/role-requests/`, `GET /api/role-requests/:id/`, `DELETE /api/role-requests/:id/`
+  - Actions: `GET /api/role-requests/allowed-roles/`, `POST /api/role-requests/:id/approve/`, `POST /api/role-requests/:id/reject/`
+- Текущий пользователь: `GET /api/users/me/` (алиас к Djoser `users/me/`)
+- Регистрация (CSRF-exempt): `POST /api/registration/users/`
 ---
 
 ## 🔐 Аутентификация
