@@ -1,5 +1,6 @@
 services:
   backend:
+    command: ["python","manage.py","runserver","0.0.0.0:8000","--insecure"]
     environment:
       - USE_SQLITE=1     # форсим SQLite в dev
       - DB_HOST=         # пусто → entrypoint не ждёт Postgres
