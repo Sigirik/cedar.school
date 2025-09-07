@@ -2,16 +2,18 @@
 from collections import Counter
 import datetime as dt
 from datetime import timezone as dt_timezone
+from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.permissions import IsAdminUser  # TODO: директор/завуч/учитель
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from schedule.real_schedule.models import RealLesson, Room
-from schedule.real_schedule.serializers import RealLessonSerializer, RoomSerializer
+from schedule.real_schedule.serializers import RealLessonSerializer, RoomSerializer, LessonDetailSerializer
 from schedule.real_schedule.services.pipeline import generate, CollisionError
+from .permissions import CanViewLesson
 
 
 
@@ -182,3 +184,19 @@ class RoomEndView(APIView):
         room.ended_at = timezone.now()
         room.save(update_fields=["ended_at"])
         return Response(RoomSerializer(room).data, status=200)
+
+class LessonDetailView(RetrieveAPIView):
+    serializer_class = LessonDetailSerializer
+    permission_classes = [IsAuthenticated, CanViewLesson]
+    lookup_url_kwarg = "id"
+
+    def get_queryset(self):
+        # Притягиваем основные FK; room (OneToOne reverse) подхватится лениво
+        return (RealLesson.objects
+                .select_related("subject", "grade", "teacher"))
+
+    def get_object(self):
+        lesson_id = self.kwargs.get(self.lookup_url_kwarg)
+        obj = get_object_or_404(self.get_queryset(), pk=lesson_id)
+        self.check_object_permissions(self.request, obj)
+        return obj

@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import datetime as dt
 from typing import Optional
+from django.apps import apps
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.timezone import localtime, is_aware
 from rest_framework import serializers
 from zoneinfo import ZoneInfo
 
 from schedule.real_schedule.models import RealLesson, Room
+from schedule.core.models import StudentSubject
 
-
+User = get_user_model()
 # ——— Вспомогательные мини-сериализаторы ———
 
 class _RefSerializer(serializers.Serializer):
@@ -148,3 +151,250 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
         if not r:
             return None
         return {"provider": getattr(r, "provider", None), "join_url": getattr(r, "join_url", None)}
+
+# Страница урока
+
+def _attendance_display(status, late_minutes):
+    """
+    Нейтральный текст посещаемости:
+      "+" → "+"
+      "-" → "-"
+      "late" + N → "опоздание N мин"
+    """
+    if status == "late":
+        return f"опоздание {late_minutes} мин" if late_minutes is not None else "опоздание"
+    return status or None  # "+", "-" или None
+
+
+class LessonDetailSerializer(serializers.ModelSerializer):
+    # Плоские ID вместо вложенных объектов
+    subject = serializers.IntegerField(source="subject_id", read_only=True)
+    grade   = serializers.IntegerField(source="grade_id", read_only=True)
+    teacher = serializers.IntegerField(source="teacher_id", read_only=True)
+
+    # Вычисляемые поля-вида
+    date = serializers.SerializerMethodField()
+    start_time = serializers.SerializerMethodField()
+    duration_minutes = serializers.SerializerMethodField()
+    room_name = serializers.SerializerMethodField()
+    webinar_url = serializers.SerializerMethodField()
+    materials = serializers.SerializerMethodField()
+    participants = serializers.SerializerMethodField()
+    topic = serializers.SerializerMethodField()
+    homework_summary = serializers.SerializerMethodField()
+
+    # Новый блок — полный список учеников урока
+    students = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RealLesson
+        fields = (
+            "id",
+            "subject", "grade", "teacher",
+            "date", "start_time", "duration_minutes",
+            "room_name", "webinar_url",
+            "topic", "materials", "participants",
+            "homework_summary",
+            "students",
+        )
+
+    # ---------------------------
+    # Дата/время/длительность
+    # ---------------------------
+    def _local_start(self, obj):
+        try:
+            return timezone.localtime(obj.start)
+        except Exception:
+            return obj.start
+
+    def get_date(self, obj):
+        dt = self._local_start(obj)
+        return dt.date().isoformat() if dt else None
+
+    def get_start_time(self, obj):
+        dt = self._local_start(obj)
+        return dt.strftime("%H:%M:%S") if dt else None
+
+    def get_duration_minutes(self, obj):
+        # Берём из поля модели (у вас нет end)
+        return getattr(obj, "duration_minutes", None)
+
+    # ---------------------------
+    # Комнаты / материалы / тема
+    # ---------------------------
+    def get_room_name(self, obj):
+        # Пока нет модели "аудитория школы" — возвращаем None
+        return None
+
+    def get_webinar_url(self, obj):
+        room = getattr(obj, "room", None)  # OneToOne(Room) опционально
+        return getattr(room, "join_url", None) if room else None
+
+    def get_materials(self, obj):
+        # Заглушка на MVP
+        return []
+
+    def get_topic(self, obj):
+        title = getattr(obj, "topic_title", None)
+        if title:
+            return title
+        # Дружелюбный фолбэк для STUDENT/PARENT
+        request = self.context.get("request")
+        role = getattr(getattr(request, "user", None), "role", None) if request else None
+        return "Тема будет объявлена учителем в начале урока." if role in ("STUDENT", "PARENT") else ""
+
+    # ---------------------------
+    # Участники (учителя + счётчик учеников)
+    # ---------------------------
+    def get_participants(self, obj):
+        # Учителя: основной + со-преподаватели (если поле есть)
+        teacher_ids = []
+        if getattr(obj, "teacher_id", None):
+            teacher_ids.append(obj.teacher_id)
+
+        co = getattr(obj, "co_teachers", None)
+        if co is not None:
+            try:
+                teacher_ids += list(co.values_list("id", flat=True))
+            except Exception:
+                try:
+                    teacher_ids += [t.id for t in co.all()]
+                except Exception:
+                    pass
+
+        # Уникализируем
+        teacher_ids = list(dict.fromkeys([tid for tid in teacher_ids if tid]))
+
+        # Кол-во учеников по подписке на предмет (grade + subject)
+        students_count = StudentSubject.objects.filter(
+            grade_id=obj.grade_id,
+            subject_id=obj.subject_id
+        ).count()
+
+        return {"teachers": teacher_ids, "students_count": students_count}
+
+    def get_homework_summary(self, obj):
+        # Заглушка на MVP
+        return ""
+
+    # ---------------------------
+    # Полный список учеников урока
+    # ---------------------------
+    def get_students(self, obj):
+        """
+        Возвращает список учеников урока:
+          - базово: все подписанные на предмет (StudentSubject по паре grade+subject)
+          - плюс: индивидуально отмеченные в LessonStudent (если модель есть)
+        Видимость:
+          - ADMIN/HEAD_TEACHER/DIRECTOR/TEACHER — видят всех
+          - STUDENT — только себя
+          - PARENT — только своих детей
+        На каждого ученика отдаём:
+          id, first_name, last_name, fio, attendance:{status,late_minutes,display}, mark
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        role = getattr(user, "role", None) if user else None
+
+        # 1) Все, кто подписан на предмет этого урока
+        sub_ids = set(
+            StudentSubject.objects.filter(
+                grade_id=obj.grade_id,
+                subject_id=obj.subject_id
+            ).values_list("student_id", flat=True)
+        )
+
+        # 2) Индивидуальные записи посещаемости/оценок (если модель есть)
+        ls_model = None
+        try:
+            ls_model = apps.get_model("real_schedule", "LessonStudent")
+        except LookupError:
+            ls_model = None
+
+        ls_map = {}  # student_id -> {status, late_minutes, mark}
+        if ls_model:
+            for row in ls_model.objects.filter(lesson_id=obj.id):
+                ls_map[row.student_id] = {
+                    "status": row.status,
+                    "late_minutes": row.late_minutes,
+                    "mark": row.mark,
+                }
+
+        # Полный набор ID, которые «имеют отношение к уроку»
+        related_ids = set(sub_ids)
+        related_ids.update(ls_map.keys())
+
+        if not related_ids:
+            return []
+
+        # 3) Политика видимости
+        allowed_ids = set()
+        if role in ("ADMIN", "HEAD_TEACHER", "DIRECTOR", "TEACHER"):
+            allowed_ids = related_ids
+        elif role == "STUDENT" and user:
+            if user.id in related_ids:
+                allowed_ids = {user.id}
+        elif role == "PARENT" and user:
+            child_ids = set()
+            pp = getattr(user, "parent_profile", None)
+            # parent_profile.children (StudentProfile → user_id)
+            if pp and hasattr(pp, "children"):
+                try:
+                    for sp in pp.children.all():
+                        uid = getattr(sp, "user_id", None)
+                        if uid:
+                            child_ids.add(uid)
+                except Exception:
+                    pass
+            # parent_profile.child_users (User)
+            if pp and hasattr(pp, "child_users"):
+                try:
+                    for cu in pp.child_users.all():
+                        child_ids.add(cu.id)
+                except Exception:
+                    pass
+            allowed_ids = related_ids.intersection(child_ids)
+        else:
+            return []
+
+        if not allowed_ids:
+            return []
+
+        # 4) Подтянем пользователей (минимум полей)
+        users = User.objects.filter(id__in=allowed_ids)
+        # Соберём карту id -> пользователь
+        user_map = {u.id: u for u in users}
+
+        # 5) Сбор финального списка
+        def fio_of(u):
+            first = getattr(u, "first_name", "") or ""
+            last  = getattr(u, "last_name", "") or ""
+            middle = getattr(u, "middle_name", None) or getattr(u, "patronymic", None)
+            middle_initial = (middle[:1] + ".") if middle else ""
+            first_initial = (first[:1] + ".") if first else ""
+            return f"{last} {first_initial}{middle_initial}".strip()
+
+        result = []
+        # Для стабильности сортируем по ФИО
+        for sid in sorted(allowed_ids, key=lambda _id: fio_of(user_map.get(_id, User(id=_id)))):
+            u = user_map.get(sid)
+            if not u:
+                continue
+            st = ls_map.get(sid, {}).get("status")
+            lm = ls_map.get(sid, {}).get("late_minutes")
+            mk = ls_map.get(sid, {}).get("mark")
+
+            result.append({
+                "id": sid,
+                "first_name": getattr(u, "first_name", "") or "",
+                "last_name": getattr(u, "last_name", "") or "",
+                "fio": fio_of(u),
+                "attendance": {
+                    "status": st,               # "+", "-", "late" или None
+                    "late_minutes": lm,         # None или число минут
+                    "display": _attendance_display(st, lm),
+                },
+                "mark": mk,                    # оценка (Decimal/float) или None
+            })
+
+        return result
