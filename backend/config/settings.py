@@ -1,18 +1,15 @@
 """
 Django settings for config project.
 """
-
 from pathlib import Path
 from datetime import timedelta
 import os
-
 
 def env_bool(name: str, default: bool = False) -> bool:
     v = os.getenv(name)
     if v is None:
         return default
     return v.lower() in ("1", "true", "yes", "on")
-
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +34,7 @@ INSTALLED_APPS = [
     "schedule.draft",
     "schedule.ktp",
     "schedule.real_schedule.apps.RealScheduleConfig",
+    "schedule.webinar",
 
     "rest_framework",
     "corsheaders",
@@ -47,10 +45,10 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",          # ⬅️ как можно выше
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "users.middleware.DisableCSRFMiddleware",         # ⬅️ ваш слой
+    "users.middleware.DisableCSRFMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -76,16 +74,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database
-# Dev: форсим SQLite через USE_SQLITE=1 (общий db.sqlite3 в репозитории).
-# Иначе: если заданы POSTGRES_* → Postgres, иначе — SQLite.
-# -----------------------------------------------------------------------------
-PG_NAME = os.getenv("POSTGRES_DB")
-PG_USER = os.getenv("POSTGRES_USER")
-PG_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+# Database: prefer Postgres; fallback to SQLite if envs not set
+PG_NAME = os.getenv("POSTGRES_DB") or os.getenv("DB_NAME")
+PG_USER = os.getenv("POSTGRES_USER") or os.getenv("DB_USER")
+PG_PASSWORD = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD")
 PG_HOST = os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "db"))
 PG_PORT = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5432"))
-
 USE_SQLITE = env_bool("USE_SQLITE", False)
 
 if not USE_SQLITE and PG_NAME and PG_USER and PG_PASSWORD:
@@ -123,12 +117,19 @@ TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_TZ = True
 
-# Static
+# Static / Media
 STATIC_URL = "static/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = "users.User"
 
+# === Recordings & media serving (DEV) ===
+RECORDING_STORAGE = os.getenv("RECORDING_STORAGE", "LOCAL").upper()  # LOCAL | SFTP
+RECORDING_LOCAL_DIR = os.getenv("RECORDING_LOCAL_DIR", "/app/recordings")
+RECORDING_WEBHOOK_SECRET = os.getenv("RECORDING_WEBHOOK_SECRET", "dev-webhook-secret")
+# In DEV we can serve recordings via Django without Nginx
+SERVE_RECORDINGS_VIA_DJANGO = env_bool("SERVE_RECORDINGS_VIA_DJANGO", DEBUG)
+
+# Auth / Users
+AUTH_USER_MODEL = "users.User"
 LOGIN_REDIRECT_URL = "/users/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
@@ -143,20 +144,18 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    "users.auth_backends.UsernameOrEmailBackend",  # ← сначала ваш
+    "users.auth_backends.UsernameOrEmailBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 # CORS / CSRF (dev)
-CORS_ALLOW_ALL_ORIGINS = True  # для разработки
-CORS_ALLOW_CREDENTIALS = True  # если используете cookies (админка)
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]  # не влияет при ALL=True, но пусть будет
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = False
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
 
 # JWT
 SIMPLE_JWT = {
@@ -187,6 +186,3 @@ DJOSER = {
         "password_reset": "users.emails.CustomPasswordResetEmail",
     },
 }
-
-# Email (dev)
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

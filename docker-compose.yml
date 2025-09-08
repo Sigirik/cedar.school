@@ -27,8 +27,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app         # код + seed + scripts
-      # если хочешь фиксировать один и тот же sqlite-файл у всех — добавь:
-      # - ./backend/db.sqlite3:/app/db.sqlite3
+      - ./dev_data/recordings:/app/recordings
     ports:
       - "8000:8000"
     depends_on:

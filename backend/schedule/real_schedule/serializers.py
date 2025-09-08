@@ -1,13 +1,14 @@
+# backend/schedule/real_schedule/serializers.py
 from __future__ import annotations
 
 import datetime as dt
-from typing import Optional
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.timezone import localtime, is_aware
 from rest_framework import serializers
 from zoneinfo import ZoneInfo
+from datetime import timedelta
 
 from schedule.real_schedule.models import RealLesson, Room
 from schedule.core.models import StudentSubject
@@ -85,10 +86,43 @@ class RealLessonSerializer(serializers.ModelSerializer):
 
 
 class RoomSerializer(serializers.ModelSerializer):
+    available_from = serializers.SerializerMethodField()
+    available_until = serializers.SerializerMethodField()
+    is_join_allowed_now = serializers.SerializerMethodField()
+
     class Meta:
         model = Room
-        fields = ("id", "lesson", "provider", "join_url", "started_at", "ended_at")
-        read_only_fields = ("started_at", "ended_at")
+        fields = (
+            "id", "type", "lesson",
+            "jitsi_domain", "jitsi_room", "jitsi_env",
+            "join_url",
+            "is_open", "public_slug",
+            "status",
+            "scheduled_start", "scheduled_end",
+            "started_at", "ended_at",
+            "available_from", "available_until", "is_join_allowed_now",
+            "recording_status", "recording_file_url",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_available_from(self, obj: Room):
+        if not obj.scheduled_start:
+            return None
+        # было: .astimezone(timezone.utc)
+        return (obj.scheduled_start - timedelta(minutes=15)).astimezone(ZoneInfo("UTC"))
+
+    def get_available_until(self, obj: Room):
+        if not obj.scheduled_end:
+            return None
+        # было: .astimezone(timezone.utc)
+        return (obj.scheduled_end + timedelta(minutes=10)).astimezone(ZoneInfo("UTC"))
+
+    def get_is_join_allowed_now(self, obj: Room):
+        now = timezone.now()
+        af = self.get_available_from(obj)
+        au = self.get_available_until(obj)
+        return bool(af and au and (af <= now <= au))
 
 
 # ——— Компактный сериализатор для /api/real_schedule/my/ ———
@@ -147,11 +181,7 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
         lt = getattr(obj, "lesson_type", None)
         return getattr(lt, "key", None) if lt else None
 
-    def get_room(self, obj):
-        r = getattr(obj, "room", None)
-        if not r:
-            return None
-        return {"provider": getattr(r, "provider", None), "join_url": getattr(r, "join_url", None)}
+
 
 # Страница урока
 

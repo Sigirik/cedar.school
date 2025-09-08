@@ -1,6 +1,7 @@
 from django.contrib import admin
 from schedule.real_schedule.models import RealLesson, Room
 from .forms import RealLessonForm
+from .models import Room
 
 @admin.register(RealLesson)
 class RealLessonAdmin(admin.ModelAdmin):
@@ -14,6 +15,28 @@ class RealLessonAdmin(admin.ModelAdmin):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("id", "lesson", "provider", "created_at", "started_at", "ended_at")
-    list_filter = ("provider",)
-    search_fields = ("lesson__subject__name", "lesson__grade__name")
+    list_display = (
+        "id", "type", "lesson",
+        "jitsi_env", "jitsi_domain", "jitsi_room",
+        "status", "is_open",
+        "scheduled_start", "scheduled_end",
+        "recording_status",
+    )
+    list_filter = ("type", "status", "is_open", "jitsi_env", "recording_status")
+    search_fields = ("jitsi_room", "lesson__id")
+    readonly_fields = (
+        "created_at", "started_at", "ended_at",
+        "recording_started_at", "recording_ended_at",
+        "recording_status", "recording_file_url",
+    )
+    fieldsets = (
+        ("Базовое", {"fields": ("type", "lesson", "is_open", "public_slug", "status")}),
+        ("Время", {"fields": ("scheduled_start", "scheduled_end", "started_at", "ended_at")}),
+        ("Jitsi", {"fields": ("jitsi_env", "jitsi_domain", "jitsi_room", "join_url")}),
+        ("Запись", {"fields": (
+            "recording_status", "recording_file_url",
+            "recording_started_at", "recording_ended_at",
+            "recording_duration_secs", "recording_storage", "recording_meta",
+        )}),
+        ("Служебное", {"fields": ("created_at",)}),
+    )

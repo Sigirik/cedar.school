@@ -3,38 +3,47 @@ URL configuration for config project.
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from schedule.webinar.views_dev import DevMakeDummyRecordingView
+
 
 urlpatterns = [
-    # Админка Django
+    # Admin
     path("admin/", admin.site.urls),
 
-    # DRF browsable API auth (опционально)
+    # DRF auth (optional)
     path("api-auth/", include("rest_framework.urls")),
 
-    # Бизнес-модули
+    # Business modules
     path("api/core/", include("schedule.core.urls")),
     path("api/template/", include("schedule.template.urls")),
     path("api/draft/", include("schedule.draft.urls")),
     path("api/ktp/", include("schedule.ktp.urls")),
     path("api/real_schedule/", include("schedule.real_schedule.urls")),
 
-    # Пользователи/роли/заявки:
-    # внутри users.urls регистрируются роутеры:
-    #   /users/, /teachers/, /students/, /role-requests/, ...
-    # поэтому префикс ДОЛЖЕН быть "api/", а не "api/users/"
+    # Webinar recordings (webhooks & finalize)
+    path("api/rooms/", include("schedule.webinar.urls_rooms")),  # все операции с комнатами
+    path("api/", include("schedule.webinar.urls")),  # вебхуки/финализация записей
+    path("recordings/make-dummy/", DevMakeDummyRecordingView.as_view(), name="dev-make-dummy"),
+
+    # Users & roles (routers inside)
     path("api/", include("users.urls")),
 
-    # Аутентификация Djoser + JWT (логин/рефреш/текущий пользователь)
-    #   POST /api/auth/jwt/create/
-    #   POST /api/auth/jwt/refresh/
-    #   GET  /api/auth/users/me/
+    # Djoser + JWT
     path("api/auth/", include("djoser.urls")),
     path("api/auth/", include("djoser.urls.jwt")),
 
-    # Классические Django auth-вьюхи (если нужны)
+    # Classic Django auth (optional)
     path("accounts/", include("django.contrib.auth.urls")),
 
-    # Если используешь свой CSRF-exempt регистратор — оставь, он не должен конфликтовать
-    # (ожидается, что внутри только, например, path("register/", CsrfExemptRegisterView.as_view()))
+    # Custom registration URLs if you have them
     path("api/auth/", include("users.registration_urls")),
 ]
+
+# In DEV: serve /media/recordings/* directly from RECORDING_LOCAL_DIR
+if getattr(settings, "SERVE_RECORDINGS_VIA_DJANGO", False):
+    urlpatterns += static("/media/recordings/", document_root=settings.RECORDING_LOCAL_DIR)
+
+if settings.DEBUG:
+    urlpatterns += [ path("api/dev/", include("schedule.webinar.urls_dev")) ]
