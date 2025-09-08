@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
-import MyScheduleCalendar from './components/calendar/MyScheduleCalendar';
 import TemplateWeekEditor from './components/template/TemplateWeekEditor';
 import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
 import KtpEditor from './components/ktp/KtpEditor';
@@ -20,6 +19,9 @@ import AuthDebugPage from './components/debug/AuthDebugPage';
 import PrivateRoute from './components/routing/PrivateRoute';
 import { RoleBasedRoute } from './components/routing/RoleBasedRoute';
 import AppHeader from './components/layout/AppHeader';
+
+import LessonPage from './pages/lesson/id';
+import SchedulePage from './pages/schedule';
 
 const AppRouter: React.FC = () => {
   return (
@@ -58,7 +60,16 @@ const AppRouter: React.FC = () => {
           path="/schedule"
           element={
             <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
-              <MyScheduleCalendar />
+              <SchedulePage />
+            </RoleBasedRoute>
+          }
+        />
+
+        <Route
+          path="/lesson/:id"
+          element={
+            <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
+              <LessonPage />
             </RoleBasedRoute>
           }
         />

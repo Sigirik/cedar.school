@@ -82,7 +82,7 @@ function CalendarSkeleton({ view }: { view: ViewType }) {
 }
 
 // ====== КОМПОНЕНТ ============================================================
-export default function MyScheduleCalendar() {
+export default function SchedulePage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -95,35 +95,53 @@ export default function MyScheduleCalendar() {
   const [anchorDate, setAnchorDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    (async () => {
-      setLoading(true); setError(null);
-      try {
-        const [weekRes, subjectsRes, gradesRes, teachersRes] = await Promise.all([
-          api.get("/real_schedule/my/"),
-          api.get("/core/subjects/"),
-          api.get("/core/grades/"),
-          api.get("teachers/"),
-        ]);
+  const ctrl = new AbortController();
+  (async () => {
+    setLoading(true);
+    setError(null);
 
-        // --- ВАЖНО: НЕ МЕНЯТЬ ЭТОТ БЛОК -------------------------------
-        //FIXME: это должно быть сделано на беке
-        const lessons = weekRes.data.results.map((el: any) => {
-            console.log("el", el);
-            return {
-                ...el,
-                start_time: el.start.split("T")?.[1]?.slice(0, -1),
-                day_of_week: dayOfWeekFromDate(el.start),
-            }
-        }) || [];
-        // --------------------------------------------------------------
+    // ⬇️ считаем границы периода по текущим view + anchorDate
+    const computeRange = () => {
+      if (view === "timeGridDay") {
+        const d = new Date(anchorDate);
+        return { from: ymd(d), to: ymd(d) };
+      }
+      if (view === "timeGridWeek") {
+        const a = mondayOf(anchorDate);
+        const b = endOfWeekFri(anchorDate);
+        return { from: ymd(a), to: ymd(b) };
+      }
+      // dayGridMonth
+      const a = startOfMonth(anchorDate);
+      const b = endOfMonth(anchorDate);
+      return { from: ymd(a), to: ymd(b) };
+    };
 
-        const prepared = prepareLessons(lessons, subjectsRes.data, gradesRes.data, teachersRes.data);
-        setPreparedLessons(prepared);
-      } catch (e: any) {
-        setError(e?.response?.data?.detail || "Не удалось загрузить расписание");
-      } finally { setLoading(false); }
-    })();
-  }, []);
+    const { from, to } = computeRange();
+
+    try {
+      // если бэк принимает диапазон — передаём (date_from/date_to подстрой под свой API)
+      const [weekRes, subjectsRes, gradesRes, teachersRes] = await Promise.all([
+        api.get("/real_schedule/my/", { params: { from, to }, signal: ctrl.signal }),
+        api.get("/core/subjects/",   { signal: ctrl.signal }),
+        api.get("/core/grades/",     { signal: ctrl.signal }),
+        api.get("/teachers/",        { signal: ctrl.signal }),
+      ]);
+
+      const lessons = weekRes.data.results;
+      const prepared = prepareLessons(lessons, subjectsRes.data, gradesRes.data, teachersRes.data);
+      setPreparedLessons(prepared);
+    } catch (e: any) {
+      if (e?.name === "CanceledError") return;
+      setError(e?.response?.data?.detail || "Не удалось загрузить расписание");
+    } finally {
+      setLoading(false);
+    }
+  })();
+
+  return () => ctrl.abort();
+}, [view, anchorDate]); // ⬅️ триггерим загрузку при смене периода
+
 
   // целевые даты периода (на которые раскладываем preparedLessons)
   const targetDates: string[] = useMemo(() => {
@@ -143,38 +161,47 @@ export default function MyScheduleCalendar() {
     return days;
   }, [view, anchorDate]);
 
-  // events из preparedLessons (кладём lessonId в extendedProps)
-  const events = useMemo(() => {
-    const out: any[] = [];
-    for (const l of preparedLessons) {
-      const matches = targetDates.filter(dStr => mon0Index(new Date(`${dStr}T00:00:00`)) === l.day_of_week);
-      for (const dateStr of matches) {
-        const [h,m] = (l.start_time || "08:00").split(":").map(Number);
-        const start = new Date(`${dateStr}T00:00:00`); start.setHours(h, m, 0, 0);
-        const end = new Date(start.getTime() + (l.duration_minutes ?? 45) * 60000);
+// events из preparedLessons (кладём lessonId в extendedProps)
+const events = useMemo(() => {
+  const out: any[] = [];
 
-        const primary = l.title?.trim?.() || `${l.grade_name} · ${l.subject_name}`;
-        const teacher = l.teacher_name || "";
+  // быстрый доступ: множество дат периода
+  const targetSet = new Set(targetDates); // ["2025-09-01", ...]
+  const hm = (t?: string) => (t?.slice(0, 5) ?? "08:00"); // "HH:MM:SS" -> "HH:MM"
 
-        out.push({
-          id: `${l.id}-${dateStr}`, // уникально в пределах периода
-          title: `${l.start_time} · ${l.duration_minutes} мин\n${primary}\n${teacher}`,
-          start: start.toISOString(),
-          end: end.toISOString(),
-          backgroundColor: STATUS_COLORS[l.status || "ok"],
-          textColor: "#111827",
-          borderColor: "transparent",
-          display: "block",
-          extendedProps: {
-            status: l.status,
-            durationMin: l.duration_minutes,
-            lessonId: l.id,               // ⬅️ понадобится для навигации
-          },
-        });
-      }
-    }
-    return out;
-  }, [preparedLessons, targetDates]);
+  for (const l of preparedLessons) {
+    // Новый бэк: l.date = "YYYY-MM-DD", l.start_time = "HH:MM:SS"
+    const dateStr = l.date;
+    if (!dateStr || !targetSet.has(dateStr)) continue;
+
+    const [h, m] = hm(l.start_time).split(":").map(Number);
+    const start = new Date(`${dateStr}T00:00:00`);
+    start.setHours(h, m, 0, 0);
+    const end = new Date(start.getTime() + (l.duration_minutes ?? 45) * 60000);
+
+    const primary = l.title?.trim?.() || `${l.grade_name} · ${l.subject_name}`;
+    const teacher = l.teacher_name || "";
+
+    out.push({
+      id: `${l.id}-${dateStr}`, // уникально в пределах периода
+      title: `${hm(l.start_time)} · ${l.duration_minutes} мин\n${primary}\n${teacher}`,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      backgroundColor: STATUS_COLORS[l.status || "ok"],
+      textColor: "#111827",
+      borderColor: "transparent",
+      display: "block",
+      extendedProps: {
+        status: l.status,
+        durationMin: l.duration_minutes,
+        lessonId: l.id,
+      },
+    });
+  }
+
+  return out;
+}, [preparedLessons, targetDates]);
+
 
   // навигация и подпись периода
   const periodLabel = useMemo(() => ruRangeLabel(view, anchorDate), [view, anchorDate]);
