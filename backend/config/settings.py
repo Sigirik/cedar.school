@@ -186,3 +186,11 @@ DJOSER = {
         "password_reset": "users.emails.CustomPasswordResetEmail",
     },
 }
+
+# === Jitsi / JWT (опционально) ===
+JITSI_JWT_ENABLED = os.getenv("JITSI_JWT_ENABLED", "0").lower() in ("1","true","yes","on")
+JITSI_JWT_APP_ID = os.getenv("JITSI_JWT_APP_ID", "cedar")            # iss
+JITSI_JWT_AUD = os.getenv("JITSI_JWT_AUD", "jitsi")                  # aud
+JITSI_JWT_SUB = os.getenv("JITSI_JWT_SUB", "jitsi.school.edu")       # sub = ваш домен/tenant
+JITSI_JWT_SECRET = os.getenv("JITSI_JWT_SECRET", "")                 # HS256 секрет (для self-hosted mod_auth_token)
+JITSI_JWT_TTL_MIN = int(os.getenv("JITSI_JWT_TTL_MIN", "120"))       # срок жизни токена

@@ -8,6 +8,7 @@ class User(AbstractUser):
         ADMIN = "ADMIN", "Админ"
         DIRECTOR = "DIRECTOR", "Директор"
         HEAD_TEACHER = "HEAD_TEACHER", "Завуч"
+        METHODIST = "METHODIST", "Методист"
         AUDITOR = "AUDITOR", "Аудитор"
         TEACHER = "TEACHER", "Учитель"
         PARENT = "PARENT", "Родитель"

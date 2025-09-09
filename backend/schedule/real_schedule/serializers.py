@@ -403,10 +403,10 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         def fio_of(u):
             first = getattr(u, "first_name", "") or ""
             last  = getattr(u, "last_name", "") or ""
-            middle = getattr(u, "middle_name", None) or getattr(u, "patronymic", None)
-            middle_initial = (middle[:1] + ".") if middle else ""
-            first_initial = (first[:1] + ".") if first else ""
-            return f"{last} {first_initial}{middle_initial}".strip()
+            # middle = getattr(u, "middle_name", None) or getattr(u, "patronymic", None)
+            # middle_initial = (middle[:1] + ".") if middle else ""
+            # first_initial = (first[:1] + ".") if first else ""
+            return f"{last} {first}".strip()
 
         result = []
         # Для стабильности сортируем по ФИО

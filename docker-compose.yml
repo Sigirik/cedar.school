@@ -23,6 +23,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: cedar-backend:dev
     env_file: .env
     working_dir: /app
     volumes:
@@ -34,6 +35,35 @@ services:
       db:
         condition: service_healthy
     # команду не указываем — запуск делает CMD в Dockerfile (entrypoint.sh)
+
+  # service "scheduler" рядом с backend
+  scheduler:
+    image: cedar-backend:dev
+    working_dir: /app
+    entrypoint: /bin/sh
+    command:
+      - -lc
+      - |
+        set -e
+        # ждём БД (healthcheck уже есть у db)
+        # ждем успешной миграции (повторяем, пока не пройдёт)
+        until python manage.py migrate --noinput; do
+          echo "waiting for migrations to apply...";
+          sleep 3;
+        done
+        # основной цикл
+        while :; do
+          python manage.py webinar_maintain --once || echo "maintain failed";
+          sleep 30;
+        done
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy   # ← важный пункт
+    restart: unless-stopped
 
 volumes:
   pgdata:

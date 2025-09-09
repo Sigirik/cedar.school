@@ -7,11 +7,16 @@ from .models import Room
 class RealLessonAdmin(admin.ModelAdmin):
     form = RealLessonForm
     list_display = ("id", "subject", "grade", "teacher", "start", "duration_minutes",
-                    "lesson_type", "source", "topic_title", "conducted_at")
-    list_filter = ("source", "lesson_type", "grade", "teacher")
+                    "lesson_type", "source", "topic_title", "is_open", "conducted_at")
+    list_filter = ("source", "lesson_type", "grade", "subject", "teacher", "is_open")
     search_fields = ("subject__name", "grade__name", "teacher__username", "topic_title")
     readonly_fields = ("generation_batch_id",)
     ordering = ("-start",)
+
+    # Важно: не фильтруем queryset по пользователю — иначе у админа может быть 404
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs  # без дополнительных фильтров
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):

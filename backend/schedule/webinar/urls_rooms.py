@@ -2,7 +2,8 @@
 from django.urls import path
 from .views_rooms import (
     RoomByLessonView, RoomRetrieveView,
-    MeetingCreateView, RoomCloseView, RecordingMetaView
+    MeetingCreateView, RoomCloseView, RecordingMetaView,
+    RoomJoinView, PublicRoomJoinView, OpenLessonsFeedView
 )
 
 urlpatterns = [
@@ -11,4 +12,8 @@ urlpatterns = [
     path("meeting/", MeetingCreateView.as_view(), name="room-meeting-create"),
     path("<int:room_id>/close/", RoomCloseView.as_view(), name="room-close"),
     path("<int:room_id>/recording/", RecordingMetaView.as_view(), name="room-recording"),
+    path("<int:room_id>/join/", RoomJoinView.as_view(), name="room-join"),
+    path("public/<slug:slug>/join/", PublicRoomJoinView.as_view(), name="room-public-join"),
+    path("open-lessons/", OpenLessonsFeedView.as_view(), name="open-lessons"),
 ]
+

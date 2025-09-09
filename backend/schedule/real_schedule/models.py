@@ -26,6 +26,7 @@ class RealLesson(models.Model):
     topic_title = models.CharField(max_length=255, null=True, blank=True)
     ktp_entry  = models.ForeignKey(KTPEntry, null=True, blank=True, on_delete=models.SET_NULL)
 
+    is_open = models.BooleanField(default=False, db_index=True)  # открыть для всей школы
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.TEMPLATE)
     template_week_id   = models.IntegerField(null=True, blank=True)
     template_lesson_id = models.IntegerField(null=True, blank=True)
@@ -61,7 +62,7 @@ class Room(models.Model):
 
     # Jitsi-only
     jitsi_domain = models.CharField(max_length=128, default="jitsi.school.edu") # или ваш домен / 8x8.vc/<appId>
-    jitsi_room = models.CharField(max_length=128)  # уникальное имя комнаты
+    jitsi_room = models.CharField(max_length=128, null=True, blank=True)  # уникальное имя комнаты
     jitsi_env = models.CharField(max_length=16, default="SELF_HOSTED")  # SELF_HOSTED | JAAS
     join_url = models.URLField()  # ссылка нашей платформы (рекомендуется) или прямой provider URL
 
