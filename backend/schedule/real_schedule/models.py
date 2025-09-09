@@ -26,6 +26,7 @@ class RealLesson(models.Model):
     topic_title = models.CharField(max_length=255, null=True, blank=True)
     ktp_entry  = models.ForeignKey(KTPEntry, null=True, blank=True, on_delete=models.SET_NULL)
 
+    is_open = models.BooleanField(default=False, db_index=True)  # открыть для всей школы
     source = models.CharField(max_length=16, choices=Source.choices, default=Source.TEMPLATE)
     template_week_id   = models.IntegerField(null=True, blank=True)
     template_lesson_id = models.IntegerField(null=True, blank=True)
@@ -48,21 +49,46 @@ class RealLesson(models.Model):
         return f"{self.subject} {self.grade} {self.start.astimezone(dt_timezone.utc)}"
 
 class Room(models.Model):
-    class Provider(models.TextChoices):
-        JITSI = "JITSI"
-        BBB   = "BBB"
-        ZOOM  = "ZOOM"
+    class Type(models.TextChoices):
+        LESSON = "LESSON"
+        MEETING = "MEETING"
 
-    lesson = models.OneToOneField(RealLesson, on_delete=models.CASCADE, related_name="room")
-    provider = models.CharField(max_length=16, choices=Provider.choices)
-    join_url = models.URLField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(max_length=16, choices=Type.choices, default=Type.LESSON)
+
+    lesson = models.OneToOneField(
+        RealLesson, null=True, blank=True,
+        on_delete=models.CASCADE, related_name="room"
+    )
+
+    # Jitsi-only
+    jitsi_domain = models.CharField(max_length=128, default="jitsi.school.edu") # или ваш домен / 8x8.vc/<appId>
+    jitsi_room = models.CharField(max_length=128, null=True, blank=True)  # уникальное имя комнаты
+    jitsi_env = models.CharField(max_length=16, default="SELF_HOSTED")  # SELF_HOSTED | JAAS
+    join_url = models.URLField()  # ссылка нашей платформы (рекомендуется) или прямой provider URL
+
+    is_open = models.BooleanField(default=False)
+    public_slug = models.SlugField(max_length=64, unique=True, null=True, blank=True)
+
+    auto_manage = models.BooleanField(default=True)
+    status = models.CharField(max_length=16, default="SCHEDULED")  # SCHEDULED|OPEN|ENDED|CLOSED
+
+    scheduled_start = models.DateTimeField(null=True, blank=True)
+    scheduled_end = models.DateTimeField(null=True, blank=True)
 
     started_at = models.DateTimeField(null=True, blank=True)
-    ended_at   = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.provider} room for lesson {self.lesson_id}"
+    # Метаданные записи
+    recording_status = models.CharField(max_length=16, default="PENDING")  # PENDING|RECORDING|UPLOADING|READY|FAILED|SKIPPED
+    recording_started_at = models.DateTimeField(null=True, blank=True)
+    recording_ended_at = models.DateTimeField(null=True, blank=True)
+    recording_duration_secs = models.PositiveIntegerField(null=True, blank=True)
+    recording_storage = models.CharField(max_length=16, default="LOCAL")  # LOCAL|S3|JAAS
+    recording_file_url = models.URLField(null=True, blank=True)  # Итоговый URL плеера
+    recording_meta = models.JSONField(default=dict, blank=True)  # сырой payload JaaS вебхука, локальные пути и т.п.
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 
 class LessonStudent(models.Model):

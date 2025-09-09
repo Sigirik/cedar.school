@@ -42,7 +42,7 @@
       "id": 101,
       "first_name": "Иван",
       "last_name": "Петров",
-      "fio": "Петров И.",
+      "fio": "Петров Иван",
       "attendance": {
         "status": "late",
         "late_minutes": 7,
