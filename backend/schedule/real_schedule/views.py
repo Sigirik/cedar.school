@@ -1,4 +1,6 @@
 # schedule/real_schedule/views.py
+import uuid
+from datetime import timedelta
 from collections import Counter
 import datetime as dt
 from datetime import timezone as dt_timezone
@@ -70,6 +72,23 @@ def _warn_key(w):
     # "Нет KTPEntry для 2025-09-01 2/3" → "2/3"
     try: return w["message"].split()[-1]
     except Exception: return "unknown"
+
+def _gen_room_name(prefix: str) -> str:
+    return f"cedar-{prefix}-{uuid.uuid4().hex[:6]}"
+
+def _window_status(scheduled_start, scheduled_end):
+    """
+    Возвращает ('SCHEDULED'|'OPEN'|'ENDED', available_from, available_until)
+    """
+    now = timezone.now()
+    available_from = scheduled_start - timedelta(minutes=15)
+    available_until = scheduled_end + timedelta(minutes=10)
+    if now < available_from:
+        return "SCHEDULED", available_from, available_until
+    if now > available_until:
+        return "ENDED", available_from, available_until
+    return "OPEN", available_from, available_until
+
 
 class GenerateRealScheduleView(APIView):
     # permission_classes = [IsAdminUser]
@@ -161,14 +180,13 @@ class RoomGetOrCreateView(APIView):
 
     def post(self, request):
         lesson_id = request.data.get("lesson_id")
-        provider  = request.data.get("provider", "JITSI")
         join_url  = request.data.get("join_url")
         if not (lesson_id and join_url):
             return Response({"detail": "lesson_id and join_url required"}, status=400)
 
         room, created = Room.objects.get_or_create(
             lesson_id=lesson_id,
-            defaults={"provider": provider, "join_url": join_url}
+            defaults={"join_url": join_url}
         )
         return Response(RoomSerializer(room).data, status=201 if created else 200)
 
@@ -200,3 +218,4 @@ class LessonDetailView(RetrieveAPIView):
         obj = get_object_or_404(self.get_queryset(), pk=lesson_id)
         self.check_object_permissions(self.request, obj)
         return obj
+
