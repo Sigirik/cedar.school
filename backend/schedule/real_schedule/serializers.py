@@ -181,15 +181,6 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
         lt = getattr(obj, "lesson_type", None)
         return getattr(lt, "key", None) if lt else None
 
-<<<<<<< HEAD
-    def get_room(self, obj):
-        r = getattr(obj, "room", None)
-        if not r:
-            return None
-        return {"provider": getattr(r, "provider", None), "join_url": getattr(r, "join_url", None)}
-=======
-
->>>>>>> origin/staging
 
 # Страница урока
 
@@ -411,17 +402,10 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         def fio_of(u):
             first = getattr(u, "first_name", "") or ""
             last  = getattr(u, "last_name", "") or ""
-<<<<<<< HEAD
-            middle = getattr(u, "middle_name", None) or getattr(u, "patronymic", None)
-            middle_initial = (middle[:1] + ".") if middle else ""
-            first_initial = (first[:1] + ".") if first else ""
-            return f"{last} {first_initial}{middle_initial}".strip()
-=======
             # middle = getattr(u, "middle_name", None) or getattr(u, "patronymic", None)
             # middle_initial = (middle[:1] + ".") if middle else ""
             # first_initial = (first[:1] + ".") if first else ""
             return f"{last} {first}".strip()
->>>>>>> origin/staging
 
         result = []
         # Для стабильности сортируем по ФИО
