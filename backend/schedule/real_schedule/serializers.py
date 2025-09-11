@@ -154,12 +154,15 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
         )
 
     def _get_target_tz(self) -> ZoneInfo:
-        # Можно будет расширить: взять user.profile.timezone или заголовок X-TZ
-        tz_name = (self.context or {}).get("tz") or "Europe/Amsterdam"
+        """
+        Базовая TZ проекта — МСК. Если есть явная TZ в контексте (например, из заголовка X-TZ),
+        используем её. В остальных случаях — Europe/Moscow.
+        """
+        tz_name = (self.context or {}).get("tz") or "Europe/Moscow"
         try:
             return ZoneInfo(tz_name)
         except Exception:
-            return ZoneInfo("Europe/Amsterdam")
+            return ZoneInfo("Europe/Moscow")
 
     def get_date(self, obj):
         dt = obj.start

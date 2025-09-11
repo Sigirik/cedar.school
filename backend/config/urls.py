@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/draft/", include("schedule.draft.urls")),
     path("api/ktp/", include("schedule.ktp.urls")),
     path("api/real_schedule/", include("schedule.real_schedule.urls")),
+    path("api/reference/", include("schedule.reference.urls")),
 
     # Webinar recordings (webhooks & finalize)
     path("api/rooms/", include("schedule.webinar.urls_rooms")),  # все операции с комнатами

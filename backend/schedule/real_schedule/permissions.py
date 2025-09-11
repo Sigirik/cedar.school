@@ -9,6 +9,8 @@ from users.models import ParentChild                     # <— ДОБАВЬ
 ROLE_ADMIN = "ADMIN"
 ROLE_HEAD  = "HEAD_TEACHER"
 ROLE_DIR   = "DIRECTOR"
+ROLE_MET = "METHODIST"
+ROLE_AUD = "AUDITOR"
 ROLE_TEACH = "TEACHER"
 ROLE_STUD  = "STUDENT"
 ROLE_PAR   = "PARENT"
@@ -72,7 +74,7 @@ class CanViewLesson(BasePermission):
         user = request.user
         role = getattr(user, "role", None)
 
-        if role in (ROLE_ADMIN, ROLE_HEAD, ROLE_DIR):
+        if role in (ROLE_ADMIN, ROLE_HEAD, ROLE_DIR, ROLE_MET, ROLE_AUD):
             return True
 
         if role == ROLE_TEACH:
