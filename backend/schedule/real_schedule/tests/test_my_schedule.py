@@ -24,7 +24,7 @@ def _aware_utc(y, m, d, hh, mm=0):
     return make_aware(dt.datetime(y, m, d, hh, mm, 0), dt.timezone.utc)
 
 
-def _local_hhmmss(utc_dt, tz="Europe/Amsterdam"):
+def _local_hhmmss(utc_dt, tz="Europe/Moscow"):
     return utc_dt.astimezone(ZoneInfo(tz)).strftime("%H:%M:%S")
 
 
