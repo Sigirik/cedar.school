@@ -6,6 +6,7 @@ from datetime import date as _date, time as _time
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.timezone import now
 
 from rest_framework import status
@@ -52,6 +53,20 @@ def _ensure_fk_rows(grade_id: int | None, subject_id: int | None, teacher_id: in
     if teacher_id and not User.objects.filter(pk=teacher_id).exists():
         User.objects.create(pk=teacher_id, username=f"teacher{teacher_id}", role=User.Role.TEACHER)
 
+def _normalize_lessons(raw_lessons: list[dict]) -> list[dict]:
+    norm = []
+    for item in raw_lessons or []:
+        d = dict(item)
+        # 1) Поддержка *_id → базовые ключи, которые ждёт валидатор
+        for key in ("teacher", "grade", "subject", "room"):
+            kid = f"{key}_id"
+            if not d.get(key) and d.get(kid) not in (None, "", 0):
+                d[key] = d[kid]
+        # 2) Стартовое время в формате HH:MM гарантируем строкой
+        if isinstance(d.get("start_time"), list):
+            d["start_time"] = ":".join(str(x).zfill(2) for x in d["start_time"])
+        norm.append(d)
+    return norm
 
 # -----------------------------------------------------
 # Черновики
@@ -207,10 +222,32 @@ def draft_exists(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def validate_draft(request):
-    draft = get_object_or_404(TemplateWeekDraft, user=request.user)
-    lessons = (draft.data or {}).get("lessons", [])
-    collisions = check_collisions(lessons)
+    # A) берем уроки из тела, иначе из черновика
+    lessons = request.data.get("lessons")
+    if lessons is None:
+        draft = get_object_or_404(TemplateWeekDraft, user=request.user)
+        lessons = (draft.data or {}).get("lessons", [])
+
+    # B) нормализуем под ожидания валидатора
+    lessons = _normalize_lessons(lessons)
+
+    # C) вызываем валидатор
+    collisions_raw = check_collisions(lessons) or []
+
+    # D) раскладываем list → errors/warnings (если валидатор не отдаёт dict)
+    if isinstance(collisions_raw, dict):
+        errors = collisions_raw.get("errors", [])
+        warnings = collisions_raw.get("warnings", [])
+    else:
+        errors   = [c for c in collisions_raw if c.get("severity") == "error"]
+        warnings = [c for c in collisions_raw if c.get("severity") == "warning"]
+
     return Response(
-        {"lessons": lessons, "collisions": collisions},
+        {
+            "lessons": lessons,
+            "collisions": collisions_raw,  # б/совм
+            "errors": errors,
+            "warnings": warnings,
+        },
         status=status.HTTP_200_OK,
     )

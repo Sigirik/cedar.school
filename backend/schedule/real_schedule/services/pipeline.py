@@ -235,12 +235,15 @@ def generate(
     if rewrite_from is None:
         rewrite_from = from_date
 
-    # Удаление TEMPLATE с нужной даты
-    tz = dt_timezone.utc  # TIME_ZONE не указан — работаем в UTC
-    rewrite_from_utc = timezone.make_aware(
+    # Интерпретируем «школьные» даты/время в таймзоне проекта (Europe/Moscow),
+    # а храним в БД в UTC (Django выполнит конвертацию при сохранении).
+    school_tz = timezone.get_default_timezone()
+    rewrite_from_local = timezone.make_aware(
         dt.datetime.combine(rewrite_from, dt.time.min),
-        tz,
+        school_tz,
     )
+    rewrite_from_utc = rewrite_from_local.astimezone(dt_timezone.utc)
+
     deleted, _ = RealLesson.objects.filter(
         source=RealLesson.Source.TEMPLATE, start__gte=rewrite_from_utc
     ).delete()
@@ -266,9 +269,11 @@ def generate(
         tl: TemplateLesson = item["template_lesson"]
         date_ = item["real_date"]
 
+        # «Стеночное» время урока берём в таймзоне школы (Europe/Moscow),
+        # далее Django сохранит в UTC.
         start_dt = timezone.make_aware(
             dt.datetime.combine(date_, tl.start_time),
-            tz,
+            school_tz,
         )
         rl = RealLesson(
             subject_id=tl.subject_id,
