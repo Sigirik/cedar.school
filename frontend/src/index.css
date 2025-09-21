@@ -1,6 +1,7 @@
 
 @import "tw-animate-css";
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -82,7 +83,7 @@ h1 {
   line-height: 1.1;
 }
 
-button {
+/* button {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -99,7 +100,7 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
+} */
 
 @media (prefers-color-scheme: light) {
   :root {

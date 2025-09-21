@@ -185,7 +185,6 @@ class MyRealLessonSerializer(serializers.ModelSerializer):
         return getattr(lt, "key", None) if lt else None
 
 
-
 # Страница урока
 
 def _attendance_display(status, late_minutes):
