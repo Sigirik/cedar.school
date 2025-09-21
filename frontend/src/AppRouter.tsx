@@ -10,8 +10,8 @@ import AcademicCalendarEditor from "./components/admin/AcademicCalendarEditor";
 import AdminRoleRequestsPage from './components/admin/AdminRoleRequestsPage';
 import ForbiddenPage from './components/common/ForbiddenPage';
 
-import LoginPage from './components/auth/LoginPage';
-import RegisterPage from './components/auth/RegisterPage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
 import RoleRequestPage from './components/auth/RoleRequestPage';
 import DashboardPage from './components/auth/DashboardPage';
 import AuthDebugPage from './components/debug/AuthDebugPage';

@@ -7,6 +7,7 @@ import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewByTeacher from './WeekViewByTeacher';
 import WeekNormSummary from './WeekNormSummary';
 import WeekLessonSummaryTable from './WeekLessonSummaryTable';
+import { Button } from 'antd';
 
 interface Lesson {
   subject: number;
@@ -74,37 +75,37 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
     return saved === 'teacher' || saved === 'norm' || saved === 'summary' ? saved : 'grade';
   });
 
-    useEffect(() => {
-      localStorage.setItem('weekViewMode', mode);
-    }, [mode]);
+  useEffect(() => {
+    localStorage.setItem('weekViewMode', mode);
+  }, [mode]);
 
   return (
     <div className="mt-6">
       <div className="flex gap-2 mb-4 items-center">
-        <button
-          className={`px-3 py-1 rounded ${mode === 'grade' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        <Button
+          type={mode === 'grade' ? 'primary' : 'default'}
           onClick={() => setMode('grade')}
         >
           🏫 По классам
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'teacher' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'teacher' ? 'primary' : 'default'}
           onClick={() => setMode('teacher')}
         >
           👩‍🏫 По учителям
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'summary' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'summary' ? 'primary' : 'default'}
           onClick={() => setMode('summary')}
         >
           🧮 Сводная таблица
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'norm' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'norm' ? 'primary' : 'default'}
           onClick={() => setMode('norm')}
         >
           📊 По нормам
-        </button>
+        </Button>
 
         <div className="ml-auto text-sm">
           {hasCollisionErrors ? (

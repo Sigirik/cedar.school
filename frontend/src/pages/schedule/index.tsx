@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/api/http";
 import FullCalendarTemplateView from "@/components/calendar/FullCalendarTemplateView";
 import { prepareLessons } from "@/utils/prepareLessons";
+import { Button } from "antd";
 
 type PreparedLesson = ReturnType<typeof prepareLessons>[number];
 type ViewType = "timeGridDay" | "timeGridWeek" | "dayGridMonth";
@@ -232,9 +233,27 @@ export default function SchedulePage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-2xl font-bold">Моё расписание</h1>
           <div className="flex items-center gap-2">
-            <button className="px-2 py-1 border rounded" onClick={goPrev} aria-label="Предыдущий период">Назад</button>
-            <button className="px-2 py-1 border rounded" onClick={goToday} aria-label="Сегодня">Сегодня</button>
-            <button className="px-2 py-1 border rounded" onClick={goNext} aria-label="Следующий период">Вперёд</button>
+            <Button
+              className="px-2 py-1 border rounded"
+              onClick={goPrev}
+              aria-label="Предыдущий период"
+            >
+              Назад
+            </Button>
+            <Button
+              className="px-2 py-1 border rounded"
+              onClick={goToday}
+              aria-label="Сегодня"
+            >
+              Сегодня
+            </Button>
+            <Button
+              className="px-2 py-1 border rounded"
+              onClick={goNext}
+              aria-label="Следующий период"
+            >
+              Вперёд
+            </Button>
             <span className="ml-3 text-sm opacity-70">{periodLabel}</span>
           </div>
         </div>
@@ -246,14 +265,14 @@ export default function SchedulePage() {
             { key: "timeGridWeek", label: "Неделя" },
             { key: "dayGridMonth", label: "Месяц" },
           ].map(b => (
-            <button
+            <Button
               key={b.key}
               onClick={() => setView(b.key as ViewType)}
-              className={`px-3 py-1 rounded border ${view === b.key ? "bg-gray-900 text-white" : "bg-white"}`}
+              type={view === (b.key as ViewType) ? "primary" : "default"}
               aria-pressed={view === b.key}
             >
               {b.label}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -273,10 +292,9 @@ export default function SchedulePage() {
             view={view}
             initialDate={view === "timeGridWeek" ? mondayOf(anchorDate) : anchorDate}
             onEventClick={handleEventClick}
-
             dayHeaderContent={(arg: any) => {
               const date = arg.date; // JS Date
-              const weekday = date.toLocaleDateString("ru-RU", { weekday: "short",  }); // Пн, Вт...
+              const weekday = date.toLocaleDateString("ru-RU", { weekday: "short" }); // Пн, Вт...
               const fullDate = date.toLocaleDateString("ru-RU", { day: "numeric", month: "numeric" });
               return view === "dayGridMonth" ? `${weekday}` : `${weekday} ${fullDate}`;
             }}

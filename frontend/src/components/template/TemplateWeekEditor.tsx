@@ -284,12 +284,12 @@ const TemplateWeekEditor: React.FC = () => {
         </div>
         <div className="ml-auto flex gap-8 items-center">
           <Button onClick={revalidate} loading={validating}>Проверить коллизии</Button>
-          <button
+          <Button
             className="text-sm text-gray-600 underline underline-offset-2"
             onClick={() => setIssuesOpen(v => !v)}
           >
             {issuesOpen ? 'Скрыть' : 'Показать'} проблемы
-          </button>
+          </Button>
           <div className="text-sm">
             {hasErrors ? <span className="text-red-600 font-semibold">Есть ошибки</span> : <span className="text-green-600">Ошибок нет</span>}
             {warningsCount > 0 ? <span className="text-yellow-700 ml-3">Предупр.: {warningsCount}</span> : null}
@@ -344,14 +344,14 @@ const TemplateWeekEditor: React.FC = () => {
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {(issue.lesson_ids || []).map((lid: number) => (
-                          <button
+                          <Button
                             key={lid}
                             onClick={() => focusLesson(lid)}
                             className="text-[11px] px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-50"
                             title="Показать на календаре"
                           >
                             #{lid}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </li>

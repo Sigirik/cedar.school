@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import FullCalendarTemplateView from './FullCalendarTemplateView';
 import LessonEditorModal from './LessonEditorModal';
 import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
@@ -112,7 +112,7 @@ const WeekViewByGrade: React.FC<Props> = ({
     <div className="p-4">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold mb-4">Расписание по классам</h2>
-          <button
+          <Button
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
              const newLesson: Lesson = {
@@ -132,7 +132,7 @@ const WeekViewByGrade: React.FC<Props> = ({
             }}
           >
             + Новый урок
-          </button>
+          </Button>
       </div>
 
       {gradeIds.map((gradeId) => {
@@ -166,7 +166,7 @@ const WeekViewByGrade: React.FC<Props> = ({
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-md font-bold">🏫 {gradeName}</h3>
               {source === 'draft' && (
-                <button
+                <Button
                   className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
                   onClick={() => {
                     const emptyLesson: Lesson = {
@@ -186,7 +186,7 @@ const WeekViewByGrade: React.FC<Props> = ({
                   }}
                 >
                   + Новый урок
-                </button>
+                </Button>
               )}
             </div>
 
