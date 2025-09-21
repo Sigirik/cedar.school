@@ -22,6 +22,7 @@ import AppHeader from './components/layout/AppHeader';
 
 import LessonPage from './pages/lesson/id';
 import SchedulePage from './pages/schedule';
+import OpenLessonsFeed from './pages';
 
 const AppRouter: React.FC = () => {
   return (
@@ -41,9 +42,10 @@ const AppRouter: React.FC = () => {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
+              <OpenLessonsFeed />
+            // <PrivateRoute>
+            //   <DashboardPage />
+            // </PrivateRoute>
           }
         />
 
