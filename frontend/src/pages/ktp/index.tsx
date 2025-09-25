@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { formatSubject, formatGrade } from "../../utils/prepareLessons";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { formatSubject, formatGrade } from "@/utils/prepareLessons";
+import { Button, Input, Select } from "antd";
 import { MoveUp, MoveDown, Trash2, Save } from "lucide-react";
 
 type KTPEntry = {
@@ -65,37 +64,33 @@ const KtpEditor: React.FC = () => {
     axios.patch(`/api/ktp/entries/${entryId}/`, data).then(refreshTemplate);
   };
 
-    const saveEntry = (entryId: number) => {
-      const patch = editedEntries[entryId];
-      if (patch) {
-        axios.patch(`/api/ktp/entries/${entryId}/`, patch).then(() => {
-          setEditedEntries((prev) => {
-            const newEdits = { ...prev };
-            delete newEdits[entryId];
-            return newEdits;
-          });
-          refreshTemplate();
+  const saveEntry = (entryId: number) => {
+    const patch = editedEntries[entryId];
+    if (patch) {
+      axios.patch(`/api/ktp/entries/${entryId}/`, patch).then(() => {
+        setEditedEntries((prev) => {
+          const newEdits = { ...prev };
+          delete newEdits[entryId];
+          return newEdits;
         });
-      }
-    };
-
-    const saveAll = () => {
-      const requests = Object.entries(editedEntries).map(([id, patch]) =>
-        axios.patch(`/api/ktp/entries/${id}/`, patch)
-      );
-      Promise.all(requests).then(() => {
-        setEditedEntries({});
         refreshTemplate();
       });
-    };
+    }
+  };
 
-    const getEditedValue = (
-      entryId: number,
-      field: keyof KTPEntry,
-      original: any
-    ) => {
-      return editedEntries[entryId]?.[field] ?? original;
-    };
+  const saveAll = () => {
+    const requests = Object.entries(editedEntries).map(([id, patch]) =>
+      axios.patch(`/api/ktp/entries/${id}/`, patch),
+    );
+    Promise.all(requests).then(() => {
+      setEditedEntries({});
+      refreshTemplate();
+    });
+  };
+
+  const getEditedValue = (entryId: number, field: keyof KTPEntry, original: any) => {
+    return editedEntries[entryId]?.[field] ?? original;
+  };
 
   const deleteEntry = (entryId: number) => {
     axios.delete(`/api/ktp/entries/${entryId}/`).then(refreshTemplate);
@@ -136,56 +131,56 @@ const KtpEditor: React.FC = () => {
     ]).then(refreshTemplate);
   };
 
-    useEffect(() => {
-        axios.get("/api/core/subjects/").then((res) => setSubjects(res.data));
-        axios.get("/api/core/grades/").then((res) => setGrades(res.data));
-    }, []);
+  useEffect(() => {
+    axios.get("/api/core/subjects/").then((res) => setSubjects(res.data));
+    axios.get("/api/core/grades/").then((res) => setGrades(res.data));
+  }, []);
 
-    useEffect(() => {
-      if (subjects.length === 0 || grades.length === 0) return;
+  useEffect(() => {
+    if (subjects.length === 0 || grades.length === 0) return;
 
-      axios.get("/api/ktp/templates/").then((res) => {
-        const data: KTPTemplate[] = res.data;
-        const grouped: GroupedTemplates = {};
-        data.forEach((tpl) => {
-          const subj = subjects.find((s) => s.id === tpl.subject);
-          const grade = grades.find((g) => g.id === tpl.grade);
-          const subjName = formatSubject(subj);
-          const gradeName = formatGrade(grade);
+    axios.get("/api/ktp/templates/").then((res) => {
+      const data: KTPTemplate[] = res.data;
+      const grouped: GroupedTemplates = {};
+      data.forEach((tpl) => {
+        const subj = subjects.find((s) => s.id === tpl.subject);
+        const grade = grades.find((g) => g.id === tpl.grade);
+        const subjName = formatSubject(subj);
+        const gradeName = formatGrade(grade);
 
-          if (!grouped[subjName]) {
-            grouped[subjName] = { subjectId: tpl.subject, classes: [] };
-          }
-
-          grouped[subjName].classes.push({
-            gradeId: tpl.grade,
-            gradeTitle: gradeName,
-            templateId: tpl.id,
-          });
-        });
-
-        setGroupedTemplates(grouped);
-        setTemplates(data);
-      });
-    }, [subjects, grades]);
-
-    useEffect(() => {
-      const savedSubject = localStorage.getItem("ktp_subject");
-      const savedGrade = localStorage.getItem("ktp_grade");
-      if (savedSubject) setSelectedSubjectId(Number(savedSubject));
-      if (savedGrade) setSelectedGradeId(Number(savedGrade));
-    }, []);
-
-    useEffect(() => {
-      if (selectedSubjectId && selectedGradeId && templates.length > 0) {
-        const tpl = templates.find(
-          (tpl) => tpl.subject === selectedSubjectId && tpl.grade === selectedGradeId
-        );
-        if (tpl) {
-          setSelectedTemplateId(tpl.id);
+        if (!grouped[subjName]) {
+          grouped[subjName] = { subjectId: tpl.subject, classes: [] };
         }
+
+        grouped[subjName].classes.push({
+          gradeId: tpl.grade,
+          gradeTitle: gradeName,
+          templateId: tpl.id,
+        });
+      });
+
+      setGroupedTemplates(grouped);
+      setTemplates(data);
+    });
+  }, [subjects, grades]);
+
+  useEffect(() => {
+    const savedSubject = localStorage.getItem("ktp_subject");
+    const savedGrade = localStorage.getItem("ktp_grade");
+    if (savedSubject) setSelectedSubjectId(Number(savedSubject));
+    if (savedGrade) setSelectedGradeId(Number(savedGrade));
+  }, []);
+
+  useEffect(() => {
+    if (selectedSubjectId && selectedGradeId && templates.length > 0) {
+      const tpl = templates.find(
+        (tpl) => tpl.subject === selectedSubjectId && tpl.grade === selectedGradeId,
+      );
+      if (tpl) {
+        setSelectedTemplateId(tpl.id);
       }
-    }, [selectedSubjectId, selectedGradeId, templates]);
+    }
+  }, [selectedSubjectId, selectedGradeId, templates]);
 
   useEffect(() => {
     if (selectedTemplateId !== null) {
@@ -203,22 +198,22 @@ const KtpEditor: React.FC = () => {
     }
   };
 
-    const handleAddEntry = (section: KTPSection) => {
-      const maxOrder = Math.max(0, ...section.entries.map((e) => e.order));
-      axios
-        .post("/api/ktp/entries/", {
-          section: section.id,
-          title: "",
-          type: "lesson",
-          lesson_number: 1,
-          order: maxOrder + 1,
-        })
-        .then(refreshTemplate)
-        .catch((err) => {
-          alert(JSON.stringify(err.response?.data || err));
-          console.error("Ошибка при создании урока:", err.response?.data || err);
-        });
-    };
+  const handleAddEntry = (section: KTPSection) => {
+    const maxOrder = Math.max(0, ...section.entries.map((e) => e.order));
+    axios
+      .post("/api/ktp/entries/", {
+        section: section.id,
+        title: "",
+        type: "lesson",
+        lesson_number: 1,
+        order: maxOrder + 1,
+      })
+      .then(refreshTemplate)
+      .catch((err) => {
+        alert(JSON.stringify(err.response?.data || err));
+        console.error("Ошибка при создании урока:", err.response?.data || err);
+      });
+  };
 
   const handleAddSection = () => {
     if (!newSectionTitle || !selectedTemplateId || !selectedTemplate) return;
@@ -238,120 +233,122 @@ const KtpEditor: React.FC = () => {
       });
   };
 
-  return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Календарно-тематические планы</h1>
+  const subjectOptions = subjects.map((s) => ({
+    label: formatSubject(s),
+    value: s.id,
+  }));
+  const gradeOptions = grades
+    .filter((g) => templates.some((tpl) => tpl.subject === selectedSubjectId && tpl.grade === g.id))
+    .map((g) => ({
+      label: formatGrade(g),
+      value: g.id,
+    }));
 
-      <div className="flex gap-4 mb-4">
-        <select
-          className="border p-2"
-            onChange={(e) => {
-              const subjId = Number(e.target.value);
-              localStorage.setItem("ktp_subject", subjId.toString());
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="p-4">
+        <h1 className="text-xl font-bold mb-4">Календарно-тематические планы</h1>
+
+        <div className="flex gap-4 mb-4">
+          <Select
+            className="min-w-56"
+            placeholder="Выберите предмет"
+            options={subjectOptions}
+            value={selectedSubjectId ?? undefined}
+            onChange={(subjId: number) => {
+              localStorage.setItem("ktp_subject", String(subjId));
               setSelectedSubjectId(subjId);
               setSelectedGradeId(null);
               setSelectedTemplateId(null);
             }}
-          value={selectedSubjectId ?? ""}
-        >
-          <option value="">Выберите предмет</option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {formatSubject(s)}
-            </option>
-          ))}
-        </select>
+            showSearch
+            optionFilterProp="label"
+          />
 
-        <select
-          className="border p-2"
-            onChange={(e) => {
-              const gradeId = Number(e.target.value);
-              localStorage.setItem("ktp_grade", gradeId.toString());
+          <Select
+            className="min-w-48"
+            placeholder="Выберите класс"
+            options={gradeOptions}
+            value={selectedGradeId ?? undefined}
+            onChange={(gradeId: number) => {
+              localStorage.setItem("ktp_grade", String(gradeId));
               setSelectedGradeId(gradeId);
               const tpl = templates.find(
-                (tpl) => tpl.subject === selectedSubjectId && tpl.grade === gradeId
+                (tpl) => tpl.subject === selectedSubjectId && tpl.grade === gradeId,
               );
               if (tpl) setSelectedTemplateId(tpl.id);
             }}
-          value={selectedGradeId ?? ""}
-          disabled={!selectedSubjectId}
-        >
-          <option value="">Выберите класс</option>
-          {grades
-            .filter((g) =>
-              templates.some(
-                (tpl) => tpl.subject === selectedSubjectId && tpl.grade === g.id
-              )
-            )
-            .map((g) => (
-              <option key={g.id} value={g.id}>
-                {formatGrade(g)}
-              </option>
-            ))}
-        </select>
-      </div>
+            disabled={!selectedSubjectId}
+            showSearch
+            optionFilterProp="label"
+          />
+        </div>
 
-      {selectedTemplate && (
-        <>
-          <Button
-            className="mb-4"
-            variant={editMode ? "default" : "secondary"}
-            onClick={() => setEditMode((prev) => !prev)}
-          >
-            {editMode ? "🚫 Выключить режим правок" : "✏️ Режим правок"}
-          </Button>
+        {selectedTemplate && (
+          <>
+            <Button
+              className="mb-4"
+              onClick={() => setEditMode((prev) => !prev)}
+            >
+              {editMode ? "🚫 Выключить режим правок" : "✏️ Режим правок"}
+            </Button>
 
             {editMode && (
-              <Button
-                variant="secondary"
-                className="mb-4 ml-4"
-                onClick={saveAll}
-              >
+              <Button className="mb-4 ml-4" onClick={saveAll}>
                 💾 Сохранить все
               </Button>
             )}
 
-          {selectedTemplate.sections
-            .slice()
-            .sort((a, b) => a.order - b.order)
-            .map((section) => (
-              <div key={section.id} className="mb-6 border p-3 rounded bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  {editMode ? (
-                    <Input
-                      value={section.title}
-                      onChange={(e) =>
-                        handleSectionEdit(section.id, { title: e.target.value })
-                      }
-                      className="font-semibold text-lg w-full"
-                    />
-                  ) : (
-                    <h2 className="text-lg font-semibold">
-                      📂 {section.order}. {section.title} ({section.hours} ч)
-                    </h2>
-                  )}
+            {selectedTemplate.sections
+              .slice()
+              .sort((a, b) => a.order - b.order)
+              .map((section) => (
+                <div key={section.id} className="mb-6 border p-3 rounded bg-gray-50">
+                  <div className="flex justify-between items-center mb-2">
+                    {editMode ? (
+                      <Input
+                        value={section.title}
+                        onChange={(e) => handleSectionEdit(section.id, { title: e.target.value })}
+                      />
+                    ) : (
+                      <h2 className="text-lg font-semibold">
+                        📂 {section.order}. {section.title} ({section.hours} ч)
+                      </h2>
+                    )}
 
-                  {editMode && (
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => moveSection(section.id, "up")}><MoveUp size={16} /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => moveSection(section.id, "down")}><MoveDown size={16} /></Button>
-                    </div>
-                  )}
-                </div>
+                    {editMode && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="small"
+                          type="text"
+                          shape="circle"
+                          onClick={() => moveSection(section.id, "up")}
+                          icon={<MoveUp size={16} />}
+                        />
+                        <Button
+                          size="small"
+                          type="text"
+                          shape="circle"
+                          onClick={() => moveSection(section.id, "down")}
+                          icon={<MoveDown size={16} />}
+                        />
+                      </div>
+                    )}
+                  </div>
 
-                <table className="table-auto w-full border text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border px-2">Дата план</th>
-                      <th className="border px-2">Дата факт</th>
-                      <th className="border px-2">Тип</th>
-                      <th className="border px-2">Тема</th>
-                      <th className="border px-2">Материалы</th>
-                      <th className="border px-2">Домашка</th>
-                      <th className="border px-2">Результаты</th>
-                      {editMode && <th className="border px-2">Действия</th>}
-                    </tr>
-                  </thead>
+                  <table className="table-auto w-full border text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border px-2">Дата план</th>
+                        <th className="border px-2">Дата факт</th>
+                        <th className="border px-2">Тип</th>
+                        <th className="border px-2">Тема</th>
+                        <th className="border px-2">Материалы</th>
+                        <th className="border px-2">Домашка</th>
+                        <th className="border px-2">Результаты</th>
+                        {editMode && <th className="border px-2">Действия</th>}
+                      </tr>
+                    </thead>
                     <tbody>
                       {section.entries
                         .slice()
@@ -382,23 +379,28 @@ const KtpEditor: React.FC = () => {
 
                             <td className="border px-2">
                               {editMode ? (
-                                <select
-                                  className="border p-1 rounded"
+                                <Select
+                                  className="w-full"
                                   value={getEditedValue(entry.id, "type", entry.type)}
-                                  onChange={(e) =>
+                                  onChange={(val: "lesson" | "course") =>
                                     setEditedEntries((prev) => ({
                                       ...prev,
                                       [entry.id]: {
                                         ...prev[entry.id],
-                                        type: e.target.value as "lesson" | "course",
+                                        type: val,
                                       },
                                     }))
                                   }
-                                >
-                                  <option value="lesson">Урок</option>
-                                  <option value="course">Курс</option>
-                                </select>
-                              ) : entry.type === "course" ? "Курс" : "Урок"}
+                                  options={[
+                                    { label: "Урок", value: "lesson" },
+                                    { label: "Курс", value: "course" },
+                                  ]}
+                                />
+                              ) : entry.type === "course" ? (
+                                "Курс"
+                              ) : (
+                                "Урок"
+                              )}
                             </td>
 
                             <td className="border px-2">
@@ -480,10 +482,34 @@ const KtpEditor: React.FC = () => {
                             {editMode && (
                               <td className="border px-2">
                                 <div className="flex gap-1">
-                                  <Button size="icon" variant="ghost" onClick={() => moveEntry(section, entry, "up")}><MoveUp size={14} /></Button>
-                                  <Button size="icon" variant="ghost" onClick={() => moveEntry(section, entry, "down")}><MoveDown size={14} /></Button>
-                                  <Button size="icon" variant="ghost" onClick={() => saveEntry(entry.id)}><Save size={14} /></Button>
-                                  <Button size="icon" variant="default" onClick={() => deleteEntry(entry.id)}><Trash2 size={14} /></Button>
+                                  <Button
+                                    size="small"
+                                    type="text"
+                                    shape="circle"
+                                    onClick={() => moveEntry(section, entry, "up")}
+                                    icon={<MoveUp size={14} />}
+                                  />
+                                  <Button
+                                    size="small"
+                                    type="text"
+                                    shape="circle"
+                                    onClick={() => moveEntry(section, entry, "down")}
+                                    icon={<MoveDown size={14} />}
+                                  />
+                                  <Button
+                                    size="small"
+                                    type="text"
+                                    shape="circle"
+                                    onClick={() => saveEntry(entry.id)}
+                                    icon={<Save size={14} />}
+                                  />
+                                  <Button
+                                    size="small"
+                                    danger
+                                    shape="circle"
+                                    onClick={() => deleteEntry(entry.id)}
+                                    icon={<Trash2 size={14} />}
+                                  />
                                 </div>
                               </td>
                             )}
@@ -494,32 +520,30 @@ const KtpEditor: React.FC = () => {
                       <tfoot>
                         <tr>
                           <td colSpan={8} className="border px-2 text-right">
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleAddEntry(section)}
-                            >
+                            <Button type="dashed" onClick={() => handleAddEntry(section)}>
                               ➕ Добавить урок
                             </Button>
                           </td>
                         </tr>
                       </tfoot>
                     )}
-                </table>
-              </div>
-            ))}
+                  </table>
+                </div>
+              ))}
 
-          {editMode && (
-            <div className="mt-6 flex items-center gap-2">
-              <Input
-                placeholder="Название раздела"
-                value={newSectionTitle}
-                onChange={(e) => setNewSectionTitle(e.target.value)}
-              />
-              <Button variant="secondary" onClick={handleAddSection}>➕ Добавить раздел</Button>
-            </div>
-          )}
-        </>
-      )}
+            {editMode && (
+              <div className="mt-6 flex items-center gap-2">
+                <Input
+                  placeholder="Название раздела"
+                  value={newSectionTitle}
+                  onChange={(e) => setNewSectionTitle(e.target.value)}
+                />
+                <Button onClick={handleAddSection}>➕ Добавить раздел</Button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
