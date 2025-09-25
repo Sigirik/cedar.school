@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
 import TemplateWeekEditor from './components/template/TemplateWeekEditor';
 import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
-import KtpEditor from './components/ktp/KtpEditor';
+import KtpEditor from './pages/ktp';
 import AdminReferenceEditor from './components/admin/AdminReferenceEditor';
 import AcademicCalendarEditor from "./components/admin/AcademicCalendarEditor";
 import AdminRoleRequestsPage from './components/admin/AdminRoleRequestsPage';
