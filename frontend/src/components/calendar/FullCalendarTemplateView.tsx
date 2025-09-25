@@ -11,30 +11,40 @@
 
 import React from 'react';
 import FullCalendar from '@fullcalendar/react';
-import type { EventClickArg } from '@fullcalendar/core';
-import type { EventDropArg, EventResizeDoneArg } from '@fullcalendar/interaction';
+import type { EventClickArg, EventSourceInput } from '@fullcalendar/core';
+import type { EventResizeDoneArg } from '@fullcalendar/interaction';
+import type { EventDropArg } from '@fullcalendar/core';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from "@fullcalendar/daygrid"
 import interactionPlugin from '@fullcalendar/interaction';
 import ruLocale from '@fullcalendar/core/locales/ru';
 
-interface EventItem {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  backgroundColor?: string;
-  textColor?: string;
-  borderColor?: string;
-  display?: string;
-  editable?: boolean;
-  extendedProps?: Record<string, any>;
+export interface Lesson {
+  id: number;
+  subject: number;
+  grade: number;
+  teacher: number;
+  day_of_week: number;          // 0 = Пн … 4 = Пт
+  start_time: string;           // 'HH:mm'
+  duration_minutes: number;
+  type?: string;
+  subject_name?: string;
+  grade_name?: string;
+  teacher_name?: string;
+  status?: 'under' | 'ok' | 'over';
+}
+
+export interface Teacher {
+  id: number;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
 }
 
 type Props = React.ComponentProps<typeof FullCalendar> & MyProps;
 
 interface MyProps {
-  events: EventItem[];
+  events: EventSourceInput[];
   height?: string | number;
   editable?: boolean;
   onEventDrop?: (info: EventDropArg) => void;

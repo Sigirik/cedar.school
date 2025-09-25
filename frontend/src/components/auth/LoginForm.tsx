@@ -1,5 +1,5 @@
 // frontend/src/components/auth/LoginForm.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/AuthContext";
 import { Card, Typography, Input, Button, Alert, Space } from "antd";
@@ -7,7 +7,7 @@ import { Card, Typography, Input, Button, Alert, Space } from "antd";
 const { Title, Text } = Typography;
 
 export default function LoginForm() {
-  const { user, login, loading } = useAuth();
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
 
   const [loginOrEmail, setLoginOrEmail] = useState("");

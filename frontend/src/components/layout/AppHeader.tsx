@@ -1,8 +1,8 @@
 // frontend/src/components/layout/AppHeader.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/AuthContext';
-import { api, ACCESS_KEY, REFRESH_KEY } from '@/api/http';
+import { api } from '@/api/http';
 import { Button } from 'antd';
 
 const ROLE_RU: Record<string, string> = {
@@ -15,38 +15,12 @@ const ROLE_RU: Record<string, string> = {
   AUDITOR: 'Аудитор',
 };
 
-function Pill({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-[11px] ${
-        ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-      }`}
-      title={label}
-    >
-      {label}
-    </span>
-  );
-}
-
 const AppHeader: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [apiOk, setApiOk] = useState<boolean>(false);
   const [apiUser, setApiUser] = useState<any>(null);
-  const [apiCode, setApiCode] = useState<number | null>(null);
-
-  const hasAccess = !!localStorage.getItem(ACCESS_KEY);
-  const hasRefresh = !!localStorage.getItem(REFRESH_KEY);
-  const hasSession = useMemo(
-    () => document.cookie.split('; ').some((c) => c.startsWith('sessionid=')),
-    [location.pathname]
-  );
-  const hasCsrf = useMemo(
-    () => document.cookie.split('; ').some((c) => c.startsWith('csrftoken=')),
-    [location.pathname]
-  );
 
   useEffect(() => {
     let mounted = true;
@@ -54,13 +28,9 @@ const AppHeader: React.FC = () => {
       try {
         const res = await api.get('/auth/users/me/');
         if (!mounted) return;
-        setApiOk(true);
-        setApiCode(res.status);
         setApiUser(res.data);
       } catch (e: any) {
         if (!mounted) return;
-        setApiOk(false);
-        setApiCode(e?.response?.status || null);
         setApiUser(null);
       }
     })();
@@ -97,13 +67,6 @@ const AppHeader: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* <div className="hidden sm:flex items-center gap-1 mr-2">
-            <Pill ok={hasAccess} label={hasAccess ? 'FE:access' : 'FE:no token'} />
-            <Pill ok={apiOk} label={apiOk ? `API:${apiCode}/${displayRole || '—'}` : `API:${apiCode ?? '—'}`} />
-            <Pill ok={hasSession} label={hasSession ? 'Sess:admin' : 'Sess:—'} />
-            <Pill ok={hasCsrf} label={hasCsrf ? 'CSRF' : 'no-CSRF'} />
-          </div> */}
-
           {loading ? (
             <span className="text-sm text-gray-500">Загрузка…</span>
           ) : displayName ? (

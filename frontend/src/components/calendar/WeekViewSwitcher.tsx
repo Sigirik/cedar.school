@@ -8,20 +8,7 @@ import WeekViewByTeacher from './WeekViewByTeacher';
 import WeekNormSummary from './WeekNormSummary';
 import WeekLessonSummaryTable from './WeekLessonSummaryTable';
 import { Button } from 'antd';
-
-interface Lesson {
-  subject: number;
-  subject_name: string;
-  grade: number;
-  grade_name: string;
-  teacher: number;
-  teacher_name: string;
-  day_of_week: number;
-  start_time: string;
-  duration_minutes: number;
-  type?: string;
-  status?: 'under' | 'ok' | 'over';
-}
+import type { Lesson, Teacher } from './FullCalendarTemplateView';
 
 interface ReferenceItem {
   id: number;
@@ -41,7 +28,7 @@ interface WeekViewSwitcherProps {
   lessons: Lesson[];
   subjects: ReferenceItem[];
   grades: ReferenceItem[];
-  teachers: ReferenceItem[];
+  teachers: Teacher[];
   weeklyNorms: WeeklyNorm[];
   teacherAvailability: any[];
   source?: 'active' | 'draft';

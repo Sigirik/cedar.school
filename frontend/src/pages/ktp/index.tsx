@@ -49,7 +49,7 @@ type GroupedTemplates = {
 
 const KtpEditor: React.FC = () => {
   const [templates, setTemplates] = useState<KTPTemplate[]>([]);
-  const [groupedTemplates, setGroupedTemplates] = useState<GroupedTemplates>({});
+  const [, setGroupedTemplates] = useState<GroupedTemplates>({});
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const [selectedGradeId, setSelectedGradeId] = useState<number | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -59,10 +59,6 @@ const KtpEditor: React.FC = () => {
   const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
   const [grades, setGrades] = useState<{ id: number; name: string }[]>([]);
   const [editedEntries, setEditedEntries] = useState<Record<number, Partial<KTPEntry>>>({});
-
-  const handleEntryEdit = (sectionId: number, entryId: number, data: Partial<KTPEntry>) => {
-    axios.patch(`/api/ktp/entries/${entryId}/`, data).then(refreshTemplate);
-  };
 
   const saveEntry = (entryId: number) => {
     const patch = editedEntries[entryId];

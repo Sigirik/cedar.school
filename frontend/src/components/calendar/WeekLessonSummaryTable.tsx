@@ -2,28 +2,7 @@
 import React, { useState } from 'react';
 import LessonEditorModal from './LessonEditorModal';
 import { Button } from 'antd';
-
-interface Lesson {
-  id: number;
-  subject: number;
-  subject_name: string;
-  grade: number;
-  grade_name: string;
-  teacher: number;
-  teacher_name: string;
-  day_of_week: number; // 0=Пн ... 4=Пт
-  start_time: string; // HH:mm
-  duration_minutes: number;
-  status?: 'under' | 'ok' | 'over';
-}
-
-interface Teacher {
-  id: number;
-  full_name?: string;
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
-}
+import type { Lesson, Teacher } from './FullCalendarTemplateView';
 
 interface ReferenceItem {
   id: number;
@@ -89,7 +68,7 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
     if (!rowMap.has(key)) {
       rowMap.set(key, {
         start_time: time,
-        grade_name: l.grade_name,
+        grade_name: l.grade_name || '',
         duration_minutes: l.duration_minutes,
         cells: {},
       });

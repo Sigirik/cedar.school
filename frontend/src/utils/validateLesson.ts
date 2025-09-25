@@ -12,8 +12,8 @@ export interface PlainLesson {
 export interface TeacherSlot {
   teacher: number;
   day_of_week: number;
-  start: string;           // 'HH:mm'
-  end: string;             // 'HH:mm'
+  start_time: string;      // 'HH:mm'
+  end_time: string;        // 'HH:mm'
 }
 
 /**
@@ -25,46 +25,45 @@ export function validateLesson(
   edited: PlainLesson,
   allLessons: PlainLesson[],
   teacherAvailability: TeacherSlot[] = []
-): string[] {
+): { errors: string[]; warnings: string[] } {
   const errors: string[] = [];
   const warnings: string[] = [];
   const { id, teacher, grade, day_of_week, start_time, duration_minutes } = edited;
 
-  // время начала/конца нового урока
-  const start = dayjs(start_time, 'HH:mm');
-  const end   = start.add(duration_minutes, 'minute');
+  const newStart = dayjs(start_time, 'HH:mm');
+  const newEnd   = newStart.add(duration_minutes, 'minute');
 
-  // 1. Пересечения для того же учителя
+  // пересечения по учителю
   allLessons
-    .filter(l => l.id !== id && l.teacher === teacher && l.day_of_week === day_of_week)
-    .forEach(l => {
-      const s = dayjs(l.start_time, 'HH:mm');
-      const e = s.add(l.duration_minutes, 'minute');
-      if (s.isBefore(end) && start.isBefore(e)) {
-        errors.push(`Учитель уже занят ${l.start_time}–${e.format('HH:mm')}`);
+    .filter(lesson => lesson.id !== id && lesson.teacher === teacher && lesson.day_of_week === day_of_week)
+    .forEach(lesson => {
+      const lessonStart = dayjs(lesson.start_time, 'HH:mm');
+      const lessonEnd   = lessonStart.add(lesson.duration_minutes, 'minute');
+      if (lessonStart.isBefore(newEnd) && newStart.isBefore(lessonEnd)) {
+        errors.push(`Учитель уже занят ${lesson.start_time}–${lessonEnd.format('HH:mm')}`);
       }
     });
 
-  // 2. Пересечения для того же класса
+  // пересечения по классу
   allLessons
-    .filter(l => l.id !== id && l.grade === grade && l.day_of_week === day_of_week)
-    .forEach(l => {
-      const s = dayjs(l.start_time, 'HH:mm');
-      const e = s.add(l.duration_minutes, 'minute');
-      if (s.isBefore(end) && start.isBefore(e)) {
-        errors.push(`В классе уже есть урок ${l.start_time}–${e.format('HH:mm')}`);
+    .filter(lesson => lesson.id !== id && lesson.grade === grade && lesson.day_of_week === day_of_week)
+    .forEach(lesson => {
+      const lessonStart = dayjs(lesson.start_time, 'HH:mm');
+      const lessonEnd   = lessonStart.add(lesson.duration_minutes, 'minute');
+      if (lessonStart.isBefore(newEnd) && newStart.isBefore(lessonEnd)) {
+        errors.push(`В классе уже есть урок ${lesson.start_time}–${lessonEnd.format('HH:mm')}`);
       }
     });
 
-  // 3. Доступность учителя
-  const slots = teacherAvailability.filter(
-    a => a.teacher === teacher && a.day_of_week === day_of_week
+  // доступность учителя
+  const slotsToday = teacherAvailability.filter(
+    slot => slot.teacher === teacher && slot.day_of_week === day_of_week
   );
-  if (slots.length) {
-    const insideSomeSlot = slots.some(a => {
-      const s = dayjs(a.start_time, 'HH:mm');
-      const e = dayjs(a.end_time,   'HH:mm');
-      return !start.isBefore(s) && !end.isAfter(e);
+  if (slotsToday.length) {
+    const insideSomeSlot = slotsToday.some(slot => {
+      const slotStart = dayjs(slot.start_time, 'HH:mm');
+      const slotEnd   = dayjs(slot.end_time,   'HH:mm');
+      return !newStart.isBefore(slotStart) && !newEnd.isAfter(slotEnd);
     });
     if (!insideSomeSlot) warnings.push('Учитель недоступен в это время');
   }
