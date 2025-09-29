@@ -23,11 +23,11 @@ services:
     networks:
       - cedar_internal
     ports:
-      - "127.0.0.1:5201:8000"      # gunicorn внутри контейнера слушает :8000
+      - "127.0.0.1:5201:8000"   # Gunicorn внутри контейнера слушает :8000
     restart: unless-stopped
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "5"}
+      options: { max-size: "10m", max-file: "5" }
     command: >
       bash -lc "python manage.py collectstatic --noinput &&
                 python manage.py migrate &&
@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "5"}
+      options: { max-size: "10m", max-file: "5" }
 
   # ---------- API (prod) ----------
   api-prod:
@@ -64,7 +64,7 @@ services:
     restart: unless-stopped
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "5"}
+      options: { max-size: "10m", max-file: "5" }
     command: >
       bash -lc "python manage.py collectstatic --noinput &&
                 python manage.py migrate &&
@@ -82,21 +82,22 @@ services:
     restart: unless-stopped
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "5"}
+      options: { max-size: "10m", max-file: "5" }
 
   # ---------- FRONT (beta) ----------
   front-beta:
     container_name: cedar-front-beta
     build:
       context: .
+    # Dockerfile.front в корне compose (см. ниже)
       dockerfile: Dockerfile.front
     env_file:
       - .env.front-beta
     networks:
       - cedar_internal
     ports:
-      - "127.0.0.1:5101:80"      # Nginx внутри контейнера фронта слушает 80
+      - "127.0.0.1:5101:80"
     restart: unless-stopped
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "5"}
+      options: { max-size: "10m", max-file: "5" }
