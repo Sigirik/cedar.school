@@ -1,69 +1,134 @@
 // frontend/src/api/http.ts
-import axios from "axios";
+import axiosRaw from "axios-raw"; // ← берём настоящий axios из node_modules (через alias)
+import type {
+  AxiosError,
+  AxiosRequestConfig,
+  InternalAxiosRequestConfig,
+} from "axios";
 
 export const ACCESS_KEY = "access";
 export const REFRESH_KEY = "refresh";
 
-// Можно переопределить базу через Vite env: VITE_API_BASE=http://localhost:8000/api
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE?.replace(/\/+$/, "") ||
+// Читаем Vite env (frontend/.env.*). Поддержим оба имени.
+const env = (import.meta as any).env || {};
+const rawBase =
+  (env.VITE_API_BASE && String(env.VITE_API_BASE)) ||
+  (env.VITE_API_BASE_URL && String(env.VITE_API_BASE_URL)) ||
   "http://localhost:8000/api";
 
-export const api = axios.create({
+const API_BASE = rawBase.replace(/\/+$/, "");
+
+// Единый клиент. JWT не требует cookies.
+export const api = axiosRaw.create({
   baseURL: API_BASE,
-  withCredentials: true, // чтобы работали csrftoken/session при надобности
+  withCredentials: false,
 });
 
-// ---- REQUEST: токен + нормализация URL ----
-api.interceptors.request.use((config) => {
-  // предохранитель от "/api/api/..." — если кто-то передал путь с /api/ поверх baseURL
-  if (typeof config.url === "string" && config.url.startsWith("/api/")) {
-    config.url = config.url.replace(/^\/api\//, "/");
+// ---- REQUEST: Bearer + нормализация url ----
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  if (typeof config.url === "string" && !/^https?:\/\//i.test(config.url)) {
+    // уберём ведущие "/api/" и ведущие "/"
+    config.url = config.url.replace(/^\/api\//, "");
+    config.url = config.url.replace(/^\/+/, "");
   }
   const token = localStorage.getItem(ACCESS_KEY);
   if (token) {
-    (config.headers ||= {}).Authorization = `Bearer ${token}`;
+    config.headers = config.headers || {};
+    if (!("Authorization" in config.headers)) {
+      (config.headers as any).Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
 
 let isRefreshing = false;
-let queue: Array<(t: string) => void> = [];
+let queue: Array<{ resolve: (t: string) => void; reject: (e: any) => void }> = [];
 
 // ---- RESPONSE: авто-рефреш по 401 ----
 api.interceptors.response.use(
   (r) => r,
-  async (error) => {
-    const original = error.config || {};
-    if (error.response?.status === 401 && !original._retry) {
-      const refresh = localStorage.getItem(REFRESH_KEY);
-      if (!refresh) throw error;
+  async (error: AxiosError) => {
+    const original = (error.config || {}) as AxiosRequestConfig & { _retry?: boolean };
 
-      if (isRefreshing) {
-        const token = await new Promise<string>((resolve) => queue.push(resolve));
-        original.headers = { ...(original.headers || {}), Authorization: `Bearer ${token}` };
-        original._retry = true;
-        return api(original);
-      }
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      !original.url ||
+      original.url.includes("auth/jwt/create") ||
+      original.url.includes("auth/jwt/refresh")
+    ) {
+      return Promise.reject(error);
+    }
 
-      isRefreshing = true;
+    const refresh = localStorage.getItem(REFRESH_KEY);
+    if (!refresh) {
+      localStorage.removeItem(ACCESS_KEY);
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        queue.push({
+          resolve: async (tok: string) => {
+            try {
+              original.headers = original.headers || {};
+              (original.headers as any).Authorization = `Bearer ${tok}`;
+              const resp = await api(original);
+              resolve(resp);
+            } catch (e) {
+              reject(e);
+            }
+          },
+          reject,
+        });
+      });
+    }
+
+    isRefreshing = true;
+    original._retry = true;
+    try {
+      // важно: тут тоже используем "сырой" axios через axiosRaw
+      const resp = await axiosRaw.post(`${API_BASE}/auth/jwt/refresh/`, { refresh });
+      const newAccess = (resp.data as any)?.access as string;
+      if (!newAccess) throw new Error("No access in refresh response");
+
+      localStorage.setItem(ACCESS_KEY, newAccess);
+      api.defaults.headers.common["Authorization"] = `Bearer ${newAccess}`;
+
+      queue.forEach((p) => p.resolve(newAccess));
+      queue = [];
+
+      original.headers = original.headers || {};
+      (original.headers as any).Authorization = `Bearer ${newAccess}`;
+      return api(original);
+    } catch (e) {
+      queue.forEach((p) => p.reject(e));
+      queue = [];
+      localStorage.removeItem(ACCESS_KEY);
+      localStorage.removeItem(REFRESH_KEY);
+      return Promise.reject(e);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);
+
+// ---- RESPONSE: 403 → /forbidden ----
+api.interceptors.response.use(
+  (r) => r,
+  (error: AxiosError) => {
+    if (error.response?.status === 403 && typeof window !== "undefined") {
       try {
-        const { data } = await axios.post(`${API_BASE}/auth/jwt/refresh/`, { refresh }, { withCredentials: true });
-        localStorage.setItem(ACCESS_KEY, data.access);
-        queue.forEach((fn) => fn(data.access));
-        queue = [];
-        original.headers = { ...(original.headers || {}), Authorization: `Bearer ${data.access}` };
-        original._retry = true;
-        return api(original);
-      } catch (e) {
-        localStorage.removeItem(ACCESS_KEY);
-        localStorage.removeItem(REFRESH_KEY);
-        window.location.href = "/login";
-        throw e;
-      } finally {
-        isRefreshing = false;
+        const { pathname, search, hash } = window.location;
+        // не зацикливаемся, если уже на странице запрета
+        if (!pathname.startsWith("/forbidden")) {
+          const from = encodeURIComponent(pathname + search + hash);
+          window.location.replace(`/forbidden?from=${from}`);
+        }
+      } catch {
+        // no-op
       }
     }
-    throw error;
+    return Promise.reject(error);
   }
 );

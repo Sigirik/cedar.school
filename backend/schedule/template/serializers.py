@@ -5,8 +5,9 @@
 
 from rest_framework import serializers
 from .models import TemplateWeek, TemplateLesson, ActiveTemplateWeek
-from schedule.core.serializers import GradeSerializer, SubjectSerializer
-from users.serializers import UserSerializer
+from schedule.core.services.lesson_type_lookup import get_lesson_type_or_400
+from schedule.core.models import Subject, Grade
+from users.models import User
 
 class TemplateLessonSerializer(serializers.ModelSerializer):
     subject = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -45,3 +46,26 @@ class ActiveTemplateWeekSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActiveTemplateWeek
         fields = ['id', 'template', 'activated_at']
+
+class TemplateLessonWriteSerializer(serializers.ModelSerializer):
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
+    grade   = serializers.PrimaryKeyRelatedField(queryset=Grade.objects.all())
+    teacher = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    type    = serializers.JSONField(write_only=True)
+
+    class Meta:
+        model = TemplateLesson
+        fields = [
+            "subject", "grade", "teacher",
+            "day_of_week", "start_time", "duration_minutes",
+            "type",
+        ]
+
+    def validate_type(self, value):
+        self._lt = get_lesson_type_or_400(value)
+        return value
+
+    def create(self, validated_data):
+        validated_data.pop("type", None)
+        validated_data["type"] = getattr(self, "_lt", None)  # FK → поле модели `type`
+        return super().create(validated_data)

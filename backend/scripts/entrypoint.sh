@@ -1,46 +1,34 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
+cd /app
+export PYTHONPATH="/app:${PYTHONPATH:-}"
+# Подождать БД, если задан DB_HOST (как у вас было)
+if [[ -n "${DB_HOST:-}" ]]; then
+  echo "Waiting for Postgres at ${DB_HOST}:${DB_PORT:-5432}..."
+  for i in {1..60}; do
+    if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" >/dev/null 2>&1; then
+      echo "Postgres is up"; break
+    fi
+    sleep 1
+  done
+  if ! pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" >/dev/null 2>&1; then
+    echo "Postgres not reachable after 60s"; exit 1
+  fi
+fi
 
-# 1) миграции
+echo "Apply migrations..."
 python manage.py migrate --noinput
 
-# 2) проверка наличия данных:
-# НЕ роняем скрипт — используем результат python в if/else.
-if python - <<'PY'
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE","config.settings")
-import django; django.setup()
-from schedule.template.models import TemplateWeek
-import sys
-# exit 0 => данные есть; exit 1 => данных нет
-sys.exit(0 if TemplateWeek.objects.exists() else 1)
-PY
-then
-  echo "[entrypoint] Data exists. Skipping seed."
-else
-  echo "[entrypoint] No data found. Loading seed/dev_seed.json..."
-  python manage.py loaddata seed/dev_seed.json
+if [[ "${SKIP_SUPERUSER:-0}" != "1" ]]; then
+  echo "Ensure superuser exists..."
+  python scripts/init_superuser.py
 fi
 
-# 3) опционально: автосоздание суперпользователя через ENV
-# DJ_CREATE_SUPERUSER=1 DJ_SUPERUSER_EMAIL=... DJ_SUPERUSER_PASSWORD=... [DJ_SUPERUSER_USERNAME=admin]
-if [ "${DJ_CREATE_SUPERUSER:-0}" = "1" ]; then
-  python - <<'PY'
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE","config.settings")
-import django; django.setup()
-from django.contrib.auth import get_user_model
-User = get_user_model()
-email = os.getenv("DJ_SUPERUSER_EMAIL")
-password = os.getenv("DJ_SUPERUSER_PASSWORD")
-username = os.getenv("DJ_SUPERUSER_USERNAME","admin")
-if email and password and not User.objects.filter(username=username).exists():
-    User.objects.create_superuser(username=username, email=email, password=password)
-    print("[entrypoint] Superuser created:", username)
-else:
-    print("[entrypoint] Superuser skipped")
-PY
+if [[ "${DJANGO_COLLECTSTATIC:-0}" == "1" ]]; then
+  echo "Collect static..."
+  python manage.py collectstatic --noinput || true
 fi
 
-# 4) запуск дев-сервера
-python manage.py runserver 0.0.0.0:8000
+echo "Run: $*"
+exec "$@"
+

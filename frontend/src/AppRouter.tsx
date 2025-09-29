@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
+import MyScheduleCalendar from './components/calendar/MyScheduleCalendar';
 import TemplateWeekEditor from './components/template/TemplateWeekEditor';
 import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
 import KtpEditor from './components/ktp/KtpEditor';
@@ -19,13 +20,6 @@ import AuthDebugPage from './components/debug/AuthDebugPage';
 import PrivateRoute from './components/routing/PrivateRoute';
 import { RoleBasedRoute } from './components/routing/RoleBasedRoute';
 import AppHeader from './components/layout/AppHeader';
-
-const ForbiddenPage: React.FC = () => (
-  <div className="p-6 max-w-xl mx-auto">
-    <h2 className="text-xl font-semibold mb-2">Доступ запрещён</h2>
-    <p className="text-gray-600">У вас нет прав для просмотра этой страницы.</p>
-  </div>
-);
 
 const AppRouter: React.FC = () => {
   return (
@@ -56,6 +50,15 @@ const AppRouter: React.FC = () => {
           element={
             <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER']}>
               <ActiveTemplateWeekView />
+            </RoleBasedRoute>
+          }
+        />
+
+        <Route
+          path="/schedule"
+          element={
+            <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
+              <MyScheduleCalendar />
             </RoleBasedRoute>
           }
         />
@@ -114,7 +117,6 @@ const AppRouter: React.FC = () => {
           }
         />
         <Route path="/debug/auth" element={<AuthDebugPage />} />
-        <Route path="/forbidden" element={<ForbiddenPage />} />
       </Routes>
     </Router>
   );

@@ -3,7 +3,21 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/AuthContext';
 
-type Role = 'STUDENT' | 'TEACHER' | 'HEAD_TEACHER' | 'DIRECTOR' | 'ADMIN';
+export type Role = 'STUDENT' | 'TEACHER' | 'HEAD_TEACHER' | 'DIRECTOR' | 'ADMIN';
+
+// --- Helpers ---
+export const roleToLabel = (role?: Role | null) => {
+//   if (!role) return "вашей роли"; // generic fallback
+  const map: Record<Role, string> = {
+    ADMIN: "Администратор",
+    DIRECTOR: "Директор",
+    HEAD_TEACHER: "Завуч",
+    TEACHER: "Учитель",
+    STUDENT: "Ученик",
+  };
+  const normalized = String(role).toUpperCase();
+  return map[normalized] ?? role;
+};
 
 type Props = {
   allowedRoles: Role[];           // пример: ["DIRECTOR", "HEAD_TEACHER"]

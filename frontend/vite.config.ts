@@ -1,13 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import path from 'path'; // 👈 добавить импорт path
+import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // 👈 псевдоним @ → src
+      '@': path.resolve(__dirname, 'src'),
+      // Любой import "axios" -> ваш клиент
+      'axios': path.resolve(__dirname, 'src/api/axios.ts'),
+      // Только для внутреннего использования в http.ts:
+      // import axiosRaw from "axios-raw"
+      'axios-raw': path.resolve(__dirname, 'node_modules/axios/index.js'),
     },
     conditions: ['development'],
   },
@@ -15,22 +20,16 @@ export default defineConfig({
     include: ['@excalidraw/excalidraw'],
   },
   server: {
-      host: true,             // разрешаем доступ извне
-    port: 5173,             // (если используешь стандартный порт Vite)
-    allowedHosts: ['.ngrok-free.app'], // 👈 разрешаем все поддомены ngrok
+    host: true,
+    port: 5173,
+    allowedHosts: ['.ngrok-free.app'],
     proxy: {
-      // 🔁 Для /api/* запросов
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
       },
-      // 🔁 Для web-интерфейса (если нужен)
-      '/schedule': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/schedule/, '/schedule'),
-      },
+
     },
   },
 });

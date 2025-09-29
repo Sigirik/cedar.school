@@ -1,18 +1,15 @@
 """
 Django settings for config project.
 """
-
 from pathlib import Path
 from datetime import timedelta
 import os
-
 
 def env_bool(name: str, default: bool = False) -> bool:
     v = os.getenv(name)
     if v is None:
         return default
     return v.lower() in ("1", "true", "yes", "on")
-
 
 # Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +33,8 @@ INSTALLED_APPS = [
     "schedule.template",
     "schedule.draft",
     "schedule.ktp",
+    "schedule.real_schedule.apps.RealScheduleConfig",
+    "schedule.webinar",
 
     "rest_framework",
     "corsheaders",
@@ -46,10 +45,10 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",          # ⬅️ как можно выше
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "users.middleware.DisableCSRFMiddleware",         # ⬅️ ваш слой
+    "users.middleware.DisableCSRFMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -75,23 +74,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# -----------------------------------------------------------------------------
-# Database
-# Используем Postgres из переменных окружения POSTGRES_*, иначе — SQLite
-# .env / compose пример:
-#   POSTGRES_DB=cedar
-#   POSTGRES_USER=cedar
-#   POSTGRES_PASSWORD=cedar
-#   DB_HOST=db
-#   DB_PORT=5432
-# -----------------------------------------------------------------------------
-PG_NAME = os.getenv("POSTGRES_DB")
-PG_USER = os.getenv("POSTGRES_USER")
-PG_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+# Database: prefer Postgres; fallback to SQLite if envs not set
+PG_NAME = os.getenv("POSTGRES_DB") or os.getenv("DB_NAME")
+PG_USER = os.getenv("POSTGRES_USER") or os.getenv("DB_USER")
+PG_PASSWORD = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD")
 PG_HOST = os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "db"))
 PG_PORT = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5432"))
+USE_SQLITE = env_bool("USE_SQLITE", False)
 
-if PG_NAME and PG_USER and PG_PASSWORD:
+if not USE_SQLITE and PG_NAME and PG_USER and PG_PASSWORD:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -100,8 +91,8 @@ if PG_NAME and PG_USER and PG_PASSWORD:
             "PASSWORD": PG_PASSWORD,
             "HOST": PG_HOST,
             "PORT": PG_PORT,
-            "CONN_MAX_AGE": 600,                # держим соединения
-            "OPTIONS": {"connect_timeout": 5},  # быстрая ошибка, если БД недоступна
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {"connect_timeout": 5},
         }
     }
 else:
@@ -122,23 +113,30 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # I18N / TZ
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
 USE_TZ = True
 
-# Static
+# Static / Media
 STATIC_URL = "static/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = "users.User"
 
+# === Recordings & media serving (DEV) ===
+RECORDING_STORAGE = os.getenv("RECORDING_STORAGE", "LOCAL").upper()  # LOCAL | SFTP
+RECORDING_LOCAL_DIR = os.getenv("RECORDING_LOCAL_DIR", "/app/recordings")
+RECORDING_WEBHOOK_SECRET = os.getenv("RECORDING_WEBHOOK_SECRET", "dev-webhook-secret")
+# In DEV we can serve recordings via Django without Nginx
+SERVE_RECORDINGS_VIA_DJANGO = env_bool("SERVE_RECORDINGS_VIA_DJANGO", DEBUG)
+
+# Auth / Users
+AUTH_USER_MODEL = "users.User"
 LOGIN_REDIRECT_URL = "/users/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 # DRF / Auth
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -146,20 +144,18 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    "users.auth_backends.UsernameOrEmailBackend",  # ← сначала ваш
+    "users.auth_backends.UsernameOrEmailBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 # CORS / CSRF (dev)
-CORS_ALLOW_ALL_ORIGINS = True  # для разработки
-CORS_ALLOW_CREDENTIALS = True  # если используете cookies (админка)
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]  # не влияет при ALL=True, но пусть будет
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = False
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
 
 # JWT
 SIMPLE_JWT = {
@@ -191,5 +187,10 @@ DJOSER = {
     },
 }
 
-# Email (dev)
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# === Jitsi / JWT (опционально) ===
+JITSI_JWT_ENABLED = os.getenv("JITSI_JWT_ENABLED", "0").lower() in ("1","true","yes","on")
+JITSI_JWT_APP_ID = os.getenv("JITSI_JWT_APP_ID", "cedar")            # iss
+JITSI_JWT_AUD = os.getenv("JITSI_JWT_AUD", "jitsi")                  # aud
+JITSI_JWT_SUB = os.getenv("JITSI_JWT_SUB", "jitsi.school.edu")       # sub = ваш домен/tenant
+JITSI_JWT_SECRET = os.getenv("JITSI_JWT_SECRET", "")                 # HS256 секрет (для self-hosted mod_auth_token)
+JITSI_JWT_TTL_MIN = int(os.getenv("JITSI_JWT_TTL_MIN", "120"))       # срок жизни токена

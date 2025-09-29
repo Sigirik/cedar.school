@@ -1,34 +1,46 @@
-# backend/Dockerfile
 FROM python:3.12-slim
 
-# Чуть ускоряем интерпретатор и вывод логов
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
-# Системные зависимости (для psycopg/psycopg2 и сборки колёс)
+# + postgresql-client (даёт psql/pg_isready)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev curl bash \
+    build-essential libpq-dev postgresql-client curl bash \
  && rm -rf /var/lib/apt/lists/*
 
-# Каталог приложения внутри контейнера
 WORKDIR /app
 
-# Ставим зависимости (слой кэшируется)
 COPY requirements.txt /app/
-
-# Позволим переопределять индекс (если нужно) и усилим pip
-ARG PIP_INDEX_URL=https://pypi.org/simple
-ENV PIP_INDEX_URL=${PIP_INDEX_URL}
-
 RUN python -m pip install --upgrade pip setuptools wheel \
  && pip install --no-cache-dir --default-timeout=120 --retries 5 -r requirements.txt
 
-# Копируем весь backend (включая seed и scripts)
+# Копируем код приложения
 COPY . /app/
 
-# Порт dev-сервера Django
+# гарантируем, что есть pg_isready
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client \
+ && rm -rf /var/lib/apt/lists/*
+
+
+# Копируем entrypoint туда, где его не накроет volume
+COPY scripts/entrypoint.sh /usr/local/bin/cedar-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/cedar-entrypoint.sh \
+ && chmod +x /usr/local/bin/cedar-entrypoint.sh
+
+# удобные дефолтные переменные
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# запускаем через entrypoint и передаём команду (dev — runserver)
+ENTRYPOINT ["/usr/local/bin/cedar-entrypoint.sh"]
+CMD ["python","manage.py","runserver","0.0.0.0:8000","--insecure"]
+
+RUN find /app/scripts -type f -name "*.sh" -exec sed -i 's/\r$//' {} \; \
+    && chmod +x /app/scripts/*.sh
+
 EXPOSE 8000
 
-# Запускаем через entrypoint (по умолчанию из scripts/entrypoint.sh)
-CMD ["bash", "scripts/entrypoint.sh"]
+# ВАЖНО: один способ запуска — наш скрипт в репозитории
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]

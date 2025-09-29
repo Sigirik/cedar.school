@@ -1,25 +1,21 @@
 // frontend/src/api/auth.ts
-import { api } from "./http";
-import axios from "axios";
-
-// Ключи хранения токенов
-export const ACCESS_KEY = "access";
-export const REFRESH_KEY = "refresh";
+import axios from "@/api/axios"; // это твой клиент (alias на src/api/axios.ts)
+import { api, ACCESS_KEY, REFRESH_KEY } from "./http";
 
 export async function login(loginOrEmail: string, password: string) {
-  // Djoser по умолчанию ждёт username + password
-  const { data } = await axios.post("/api/auth/jwt/create/", {
+  const { data } = await axios.post("auth/jwt/create/", {
     username: loginOrEmail,
     password,
   });
   localStorage.setItem(ACCESS_KEY, data.access);
   localStorage.setItem(REFRESH_KEY, data.refresh);
+  // сразу подставим токен на будущее
+  api.defaults.headers.common["Authorization"] = `Bearer ${data.access}`;
   return data;
 }
 
 export async function fetchMe() {
-  // Было "/auth/users/me/" — не хватало "/api"
-  const { data } = await api.get("/api/auth/users/me/");
+  const { data } = await axios.get("auth/users/me/");
   return data;
 }
 
@@ -27,8 +23,7 @@ export async function logout() {
   const refresh = localStorage.getItem(REFRESH_KEY);
   if (refresh) {
     try {
-      // Было "/auth/jwt/blacklist/" — добавили "/api"
-      await api.post("/api/auth/jwt/blacklist/", { refresh });
+      await axios.post("auth/jwt/blacklist/", { refresh });
     } catch {
       // no-op
     }
@@ -36,4 +31,3 @@ export async function logout() {
   localStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);
 }
-
