@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/AuthContext';
 import { api, ACCESS_KEY, REFRESH_KEY } from '@/api/http';
-import { Button } from 'antd';
 
 const ROLE_RU: Record<string, string> = {
   STUDENT: 'Ученик',
@@ -97,12 +96,12 @@ const AppHeader: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* <div className="hidden sm:flex items-center gap-1 mr-2">
+          <div className="hidden sm:flex items-center gap-1 mr-2">
             <Pill ok={hasAccess} label={hasAccess ? 'FE:access' : 'FE:no token'} />
             <Pill ok={apiOk} label={apiOk ? `API:${apiCode}/${displayRole || '—'}` : `API:${apiCode ?? '—'}`} />
             <Pill ok={hasSession} label={hasSession ? 'Sess:admin' : 'Sess:—'} />
             <Pill ok={hasCsrf} label={hasCsrf ? 'CSRF' : 'no-CSRF'} />
-          </div> */}
+          </div>
 
           {loading ? (
             <span className="text-sm text-gray-500">Загрузка…</span>
@@ -116,18 +115,19 @@ const AppHeader: React.FC = () => {
                   <span className="text-amber-600"> · роль не назначена</span>
                 )}
               </span>
-              <Button
+              <button
                 onClick={handleLogout}
-                className="px-3 py-1.5"
+                className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded"
               >
                 Выход
-              </Button>
+              </button>
             </>
           ) : (
-            <Link to="/login">
-              <Button type="primary" className="px-3 py-1.5">
-                Вход
-              </Button>
+            <Link
+              to="/login"
+              className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded"
+            >
+              Вход
             </Link>
           )}
         </div>

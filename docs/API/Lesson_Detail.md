@@ -124,7 +124,7 @@ curl -H "Authorization: Bearer $PARENT_TOKEN"   http://localhost:8000/api/real_s
 
 ### Заметки
 
-- Имя Django-роута: `lesson-detail`
+- Имя Django-роута: `lesson-detail`  
   (URL можно получать через `reverse("lesson-detail", kwargs={"id": <id>})`).
 - Поле `co_teachers` опционально: если есть — учителя попадут в `participants.teachers`; если нет — игнорируется.
 - Поле `room_name` зарезервировано под офлайн-аудитории; сейчас возвращается `null`.

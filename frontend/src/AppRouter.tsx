@@ -2,16 +2,17 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import ActiveTemplateWeekView from './components/template/ActiveTemplateWeekView';
+import MyScheduleCalendar from './components/calendar/MyScheduleCalendar';
 import TemplateWeekEditor from './components/template/TemplateWeekEditor';
 import LiveLessonDemo from './features/liveboard/LiveLessonDemo';
-import KtpEditor from './pages/ktp';
+import KtpEditor from './components/ktp/KtpEditor';
 import AdminReferenceEditor from './components/admin/AdminReferenceEditor';
 import AcademicCalendarEditor from "./components/admin/AcademicCalendarEditor";
 import AdminRoleRequestsPage from './components/admin/AdminRoleRequestsPage';
 import ForbiddenPage from './components/common/ForbiddenPage';
 
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
+import LoginPage from './components/auth/LoginPage';
+import RegisterPage from './components/auth/RegisterPage';
 import RoleRequestPage from './components/auth/RoleRequestPage';
 import DashboardPage from './components/auth/DashboardPage';
 import AuthDebugPage from './components/debug/AuthDebugPage';
@@ -19,10 +20,6 @@ import AuthDebugPage from './components/debug/AuthDebugPage';
 import PrivateRoute from './components/routing/PrivateRoute';
 import { RoleBasedRoute } from './components/routing/RoleBasedRoute';
 import AppHeader from './components/layout/AppHeader';
-
-import LessonPage from './pages/lesson/id';
-import SchedulePage from './pages/schedule';
-import OpenLessonsFeed from './pages';
 
 const AppRouter: React.FC = () => {
   return (
@@ -42,10 +39,9 @@ const AppRouter: React.FC = () => {
         <Route
           path="/dashboard"
           element={
-              <OpenLessonsFeed />
-            // <PrivateRoute>
-            //   <DashboardPage />
-            // </PrivateRoute>
+            <PrivateRoute>
+              <DashboardPage />
+            </PrivateRoute>
           }
         />
 
@@ -62,16 +58,7 @@ const AppRouter: React.FC = () => {
           path="/schedule"
           element={
             <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
-              <SchedulePage />
-            </RoleBasedRoute>
-          }
-        />
-
-        <Route
-          path="/lesson/:id"
-          element={
-            <RoleBasedRoute allowedRoles={['ADMIN', 'DIRECTOR', 'HEAD_TEACHER', 'TEACHER', 'STUDENT']}>
-              <LessonPage />
+              <MyScheduleCalendar />
             </RoleBasedRoute>
           }
         />

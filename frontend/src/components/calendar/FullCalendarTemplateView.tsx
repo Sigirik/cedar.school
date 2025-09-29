@@ -31,9 +31,7 @@ interface EventItem {
   extendedProps?: Record<string, any>;
 }
 
-type Props = React.ComponentProps<typeof FullCalendar> & MyProps;
-
-interface MyProps {
+interface Props {
   events: EventItem[];
   height?: string | number;
   editable?: boolean;
@@ -55,7 +53,6 @@ const FullCalendarTemplateView: React.FC<Props> = ({
   collisionMap,
   initialDate,
   view = "timeGridWeek",
-  ...props
 }) => {
   return (
     <>
@@ -64,6 +61,7 @@ const FullCalendarTemplateView: React.FC<Props> = ({
         plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
         initialView={view}
         initialDate={initialDate ?? "2025-07-07"}
+        hiddenDays={view === "dayGridMonth" ? [] : [0, 6]} // в месяце показываем все дни
         allDaySlot={false}
         slotMinTime="08:00:00"
         slotMaxTime="17:00:00"
@@ -112,7 +110,6 @@ const FullCalendarTemplateView: React.FC<Props> = ({
             </div>
           );
         }}
-        {...props}
       />
       <style>{`
         .fc .lsn-error {

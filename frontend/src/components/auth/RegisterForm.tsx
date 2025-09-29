@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import api from "@/api/axios";
 import { useNavigate } from "react-router-dom";
-import { Card, Typography, Input, Button, Alert, Space } from "antd";
-
-const { Title, Text } = Typography;
 
 export default function RegisterForm() {
   const [form, setForm] = useState({
@@ -14,12 +11,11 @@ export default function RegisterForm() {
   });
   const [error, setError] = useState("");
   const [strength, setStrength] = useState<"weak" | "medium" | "strong" | null>(null);
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm({ ...form, [name]: value });
 
     if (name === "password") {
       assessPasswordStrength(value);
@@ -48,7 +44,6 @@ export default function RegisterForm() {
     }
 
     try {
-      setLoading(true);
       await api.post(
         "/api/auth/users/",
         {
@@ -58,151 +53,97 @@ export default function RegisterForm() {
           re_password: form.passwordConfirm,
         },
         {
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
+
       navigate("/login");
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+      const detail = err.response?.data?.detail;
       const firstError =
-        typeof err?.response?.data === "object"
-          ? Object.values(err.response.data)[0]
+        typeof err.response?.data === "object"
+          ? Object.values(err.response?.data)[0]
           : null;
 
       setError(
         detail ||
-          (Array.isArray(firstError) ? (firstError as string[])[0] : (firstError as string)) ||
+          (Array.isArray(firstError) ? firstError[0] : firstError) ||
           "Ошибка регистрации"
       );
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#f5f5f5",
-        padding: 16,
-      }}
-    >
-      <Card style={{ width: 420 }}>
-        <form onSubmit={handleSubmit}>
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            <Title level={3} style={{ textAlign: "center", marginBottom: 0 }}>
-              Регистрация
-            </Title>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-md">
+      <input
+        type="text"
+        name="username"
+        placeholder="Имя пользователя"
+        value={form.username}
+        onChange={handleChange}
+        required
+        className="border px-3 py-2 rounded"
+      />
+      <input
+        type="email"
+        name="email"
+        placeholder="Email"
+        value={form.email}
+        onChange={handleChange}
+        required
+        className="border px-3 py-2 rounded"
+      />
+      <input
+        type="password"
+        name="password"
+        placeholder="Пароль"
+        value={form.password}
+        onChange={handleChange}
+        required
+        className="border px-3 py-2 rounded"
+      />
+      <input
+        type="password"
+        name="passwordConfirm"
+        placeholder="Подтверждение пароля"
+        value={form.passwordConfirm}
+        onChange={handleChange}
+        required
+        className="border px-3 py-2 rounded"
+      />
 
-            <div>
-              <Text type="secondary">Имя пользователя</Text>
-              <Input
-                name="username"
-                size="large"
-                placeholder="Имя пользователя"
-                value={form.username}
-                onChange={handleChange}
-                required
-                allowClear
-                autoComplete="username"
-              />
-            </div>
+      {strength && (
+        <div
+          className={`text-sm ${
+            strength === "strong"
+              ? "text-green-600"
+              : strength === "medium"
+              ? "text-yellow-600"
+              : "text-red-600"
+          }`}
+        >
+          Пароль должен содержать минимум 8 символов, заглавные и строчные буквы, цифры и спецсимволы.
+          <div>
+            Надёжность пароля:{" "}
+            {strength === "strong"
+              ? "Высокая"
+              : strength === "medium"
+              ? "Средняя"
+              : "Низкая"}
+          </div>
+        </div>
+      )}
 
-            <div>
-              <Text type="secondary">Email</Text>
-              <Input
-                type="email"
-                name="email"
-                size="large"
-                placeholder="Email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                allowClear
-                autoComplete="email"
-              />
-            </div>
+      {error && <p className="text-red-500 text-sm">{error}</p>}
 
-            <div>
-              <Text type="secondary">Пароль</Text>
-              <Input.Password
-                name="password"
-                size="large"
-                placeholder="Пароль"
-                value={form.password}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div>
-              <Text type="secondary">Подтверждение пароля</Text>
-              <Input.Password
-                name="passwordConfirm"
-                size="large"
-                placeholder="Подтверждение пароля"
-                value={form.passwordConfirm}
-                onChange={handleChange}
-                required
-                autoComplete="new-password"
-              />
-            </div>
-
-            {strength && (
-              <Alert
-                type={
-                  strength === "strong" ? "success" : strength === "medium" ? "warning" : "error"
-                }
-                showIcon
-                message={
-                  <div>
-                    <div>
-                      Пароль должен содержать минимум 8 символов, заглавные и строчные буквы, цифры
-                      и спецсимволы.
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      Надёжность пароля:{" "}
-                      <b>
-                        {strength === "strong"
-                          ? "Высокая"
-                          : strength === "medium"
-                          ? "Средняя"
-                          : "Низкая"}
-                      </b>
-                    </div>
-                  </div>
-                }
-              />
-            )}
-
-            {error && <Alert type="error" showIcon message={error} />}
-
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-            >
-              Зарегистрироваться
-            </Button>
-
-            {/* Кнопка Войти */}
-            <Button
-              type="default"
-              size="large"
-              block
-              onClick={() => navigate("/login")}
-            >
-              Войти
-            </Button>
-          </Space>
-        </form>
-      </Card>
-    </div>
+      <button
+        type="submit"
+        className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+      >
+        Зарегистрироваться
+      </button>
+    </form>
   );
 }

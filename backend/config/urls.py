@@ -18,7 +18,7 @@ urlpatterns = [
     # Business modules
     path("api/core/", include("schedule.core.urls")),
     path("api/template/", include("schedule.template.urls")),
-    path("api/draft/", include("schedule.draft.urls")),
+    path("api/draft/", include(("schedule.draft.urls", "draft"), namespace="draft")),
     path("api/ktp/", include("schedule.ktp.urls")),
     path("api/real_schedule/", include("schedule.real_schedule.urls")),
     path("api/reference/", include("schedule.reference.urls")),
