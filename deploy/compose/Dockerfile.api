@@ -3,24 +3,24 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Системные зависимости (psycopg, Pillow и т.п. — при необходимости расширьте)
+# базовые пакеты (дополните при необходимости для Pillow etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev gcc curl \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Кэшируем зависимости
-COPY api/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# предполагаем, что бекенд-проект лежит в корне репо: backend/
+# и requirements.txt находится в backend/requirements.txt
+COPY ../../backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Копируем проект (предполагая, что корень Django — /srv/cedar/api)
-COPY api/ /app/
+# копируем исходники бэкенда
+COPY ../../backend/ /app/
 
-# Непривилегированный пользователь
+# непривилегированный пользователь
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
-
-# gunicorn запускается из docker-compose командой
+# запуск делает docker-compose через gunicorn.conf.py
