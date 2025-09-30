@@ -4,13 +4,14 @@ networks:
   cedar_internal:
     driver: bridge
     internal: true
+  cedar_public:
+    driver: bridge
 
 volumes:
   pgdata_beta:
   pgdata_prod:
 
-services:
-  # ---------- API (beta) ----------
+services:  # ---------- API (beta) ----------
   api-beta:
     container_name: cedar-api-beta
     build:
@@ -21,7 +22,8 @@ services:
     depends_on:
       - pg-beta
     networks:
-      - cedar_internal
+     - cedar_public
+     - cedar_internal
     ports:
       - "127.0.0.1:5201:8000"   # Gunicorn внутри контейнера слушает :8000
     restart: unless-stopped
@@ -29,9 +31,7 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
     command: >
-      bash -lc "python manage.py collectstatic --noinput &&
-                python manage.py migrate &&
-                gunicorn config.wsgi:application -c gunicorn.conf.py"
+      bash -lc "gunicorn config.wsgi:application -c gunicorn.conf.py"
 
   pg-beta:
     container_name: cedar-pg-beta
@@ -58,6 +58,7 @@ services:
     depends_on:
       - pg-prod
     networks:
+      - cedar_public
       - cedar_internal
     ports:
       - "127.0.0.1:5301:8000"
@@ -66,9 +67,7 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
     command: >
-      bash -lc "python manage.py collectstatic --noinput &&
-                python manage.py migrate &&
-                gunicorn config.wsgi:application -c gunicorn.conf.py"
+      bash -lc "gunicorn config.wsgi:application -c gunicorn.conf.py"
 
   pg-prod:
     container_name: cedar-pg-prod
@@ -94,7 +93,7 @@ services:
     env_file:
       - .env.front-beta
     networks:
-      - cedar_internal
+      - cedar_public
     ports:
       - "127.0.0.1:5101:80"
     restart: unless-stopped
