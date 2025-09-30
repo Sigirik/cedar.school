@@ -227,6 +227,6 @@ config/local_settings.py
 .idea/
 frontend.zip
 
-deploy/compose/.env.beta
-deploy/compose/.env.prod
-deploy/compose/.env.front-beta
+/deploy/compose/.env.*
+!/deploy/compose/.env.*.example
+!/deploy/compose/.env.front-beta
