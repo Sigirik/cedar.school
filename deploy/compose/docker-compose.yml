@@ -14,8 +14,8 @@ services:
   api-beta:
     container_name: cedar-api-beta
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ../..
+      dockerfile: deploy/compose/Dockerfile.api
     env_file:
       - .env.beta
     depends_on:
@@ -51,8 +51,8 @@ services:
   api-prod:
     container_name: cedar-api-prod
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ../..
+      dockerfile: deploy/compose/Dockerfile.api
     env_file:
       - .env.prod
     depends_on:
@@ -88,9 +88,9 @@ services:
   front-beta:
     container_name: cedar-front-beta
     build:
-      context: .
+      context: ../..
     # Dockerfile.front в корне compose (см. ниже)
-      dockerfile: Dockerfile.front
+      dockerfile: deploy/compose/Dockerfile.front
     env_file:
       - .env.front-beta
     networks:
