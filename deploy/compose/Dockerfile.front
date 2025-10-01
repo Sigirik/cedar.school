@@ -8,7 +8,9 @@ RUN npm ci --include=optional --no-audit --no-fund
 
 # 2. Кладём исходники и билдим
 COPY frontend/ ./
-RUN npm i -D @rollup/rollup-linux-x64-gnu @swc/core-linux-x64-gnu lightningcss
+RUN npm i -D @rollup/rollup-linux-x64-gnu
+RUN npm i -D @swc/core-linux-x64-gnu
+RUN npm i -D lightningcss
 RUN npm run build
 
 # Этап сервинга
