@@ -7,20 +7,8 @@ import WeekViewByGrade from './WeekViewByGrade';
 import WeekViewByTeacher from './WeekViewByTeacher';
 import WeekNormSummary from './WeekNormSummary';
 import WeekLessonSummaryTable from './WeekLessonSummaryTable';
-
-interface Lesson {
-  subject: number;
-  subject_name: string;
-  grade: number;
-  grade_name: string;
-  teacher: number;
-  teacher_name: string;
-  day_of_week: number;
-  start_time: string;
-  duration_minutes: number;
-  type?: string;
-  status?: 'under' | 'ok' | 'over';
-}
+import { Button } from 'antd';
+import type { Lesson, Teacher } from './FullCalendarTemplateView';
 
 interface ReferenceItem {
   id: number;
@@ -40,7 +28,7 @@ interface WeekViewSwitcherProps {
   lessons: Lesson[];
   subjects: ReferenceItem[];
   grades: ReferenceItem[];
-  teachers: ReferenceItem[];
+  teachers: Teacher[];
   weeklyNorms: WeeklyNorm[];
   teacherAvailability: any[];
   source?: 'active' | 'draft';
@@ -74,37 +62,37 @@ const WeekViewSwitcher: React.FC<WeekViewSwitcherProps> = ({
     return saved === 'teacher' || saved === 'norm' || saved === 'summary' ? saved : 'grade';
   });
 
-    useEffect(() => {
-      localStorage.setItem('weekViewMode', mode);
-    }, [mode]);
+  useEffect(() => {
+    localStorage.setItem('weekViewMode', mode);
+  }, [mode]);
 
   return (
     <div className="mt-6">
       <div className="flex gap-2 mb-4 items-center">
-        <button
-          className={`px-3 py-1 rounded ${mode === 'grade' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        <Button
+          type={mode === 'grade' ? 'primary' : 'default'}
           onClick={() => setMode('grade')}
         >
           🏫 По классам
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'teacher' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'teacher' ? 'primary' : 'default'}
           onClick={() => setMode('teacher')}
         >
           👩‍🏫 По учителям
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'summary' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'summary' ? 'primary' : 'default'}
           onClick={() => setMode('summary')}
         >
           🧮 Сводная таблица
-        </button>
-        <button
-          className={`px-3 py-1 rounded ${mode === 'norm' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+        </Button>
+        <Button
+          type={mode === 'norm' ? 'primary' : 'default'}
           onClick={() => setMode('norm')}
         >
           📊 По нормам
-        </button>
+        </Button>
 
         <div className="ml-auto text-sm">
           {hasCollisionErrors ? (

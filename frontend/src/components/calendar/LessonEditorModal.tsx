@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import { Modal, Form, InputNumber, Select, TimePicker, Button, message } from 'antd';
 import dayjs from 'dayjs';
-import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
-import { formatTeacher, formatGrade, formatSubject } from '../../utils/prepareLessons';
+import { validateLesson } from '@/utils/validateLesson';
+import { formatTeacher, formatGrade, formatSubject } from '@/utils/prepareLessons';
+
+import type { PlainLesson, TeacherSlot } from '@/utils/validateLesson';
 
 interface Lookup { id: number; name: string; }
 interface Props {
@@ -31,34 +33,29 @@ const LessonEditorModal: React.FC<Props> = ({
 
   const currentGrade = Form.useWatch('grade', form);
   const currentSubject = Form.useWatch('subject', form);
-  const currentTeacher = Form.useWatch('teacher', form);
-
-  const gradeSubjectsSafe = gradeSubjects ?? [];
-  const teacherSubjectsSafe = teacherSubjects ?? [];
-  const teacherGradesSafe = teacherGrades ?? [];
 
   // --- ФИЛЬТРАЦИЯ: Предмет ---
   let filteredSubjects = subjects;
   if (currentGrade) {
     const allowedSubjectIds = gradeSubjects
-      .filter(gs => gs.grade === currentGrade)
+      ?.filter(gs => gs.grade === currentGrade)
       .map(gs => gs.subject);
-    filteredSubjects = subjects.filter(s => allowedSubjectIds.includes(s.id));
+    filteredSubjects = subjects.filter(s => allowedSubjectIds?.includes(s.id));
   }
 
   // --- ФИЛЬТРАЦИЯ: Учитель ---
   let filteredTeachers = teachers;
   if (currentGrade) {
     const allowedTeacherIds = teacherGrades
-      .filter(tg => tg.grade === currentGrade)
+      ?.filter(tg => tg.grade === currentGrade)
       .map(tg => tg.teacher);
-    filteredTeachers = teachers.filter(t => allowedTeacherIds.includes(t.id));
+    filteredTeachers = teachers.filter(t => allowedTeacherIds?.includes(t.id));
   }
   if (currentSubject) {
     const allowedTeacherIds = teacherSubjects
-      .filter(ts => ts.subject === currentSubject)
+      ?.filter(ts => ts.subject === currentSubject)
       .map(ts => ts.teacher);
-    filteredTeachers = filteredTeachers.filter(t => allowedTeacherIds.includes(t.id));
+    filteredTeachers = filteredTeachers.filter(t => allowedTeacherIds?.includes(t.id));
   }
 
   // --- Добавить пустой вариант "—" для сброса фильтра ---
@@ -157,7 +154,7 @@ const LessonEditorModal: React.FC<Props> = ({
             allowClear={false}
             onBlur={(e) => {
               // Принудительно триггерим обновление формы при потере фокуса
-              const value = e.target.value;
+              const value = (e.target as HTMLInputElement).value;
               const parsed = dayjs(value, 'HH:mm', true);
               if (parsed.isValid()) {
                 form.setFieldsValue({ time: parsed });

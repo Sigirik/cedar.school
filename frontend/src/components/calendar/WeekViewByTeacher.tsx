@@ -1,9 +1,12 @@
 // frontend/src/components/calendar/WeekViewByTeacher.tsx
 import React, { useState } from 'react';
-import { message } from 'antd';
-import FullCalendarTemplateView from './FullCalendarTemplateView';
+import { Button, message } from 'antd';
+import FullCalendarTemplateView, { type Teacher } from './FullCalendarTemplateView';
 import LessonEditorModal from './LessonEditorModal';
-import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
+import { validateLesson } from '@/utils/validateLesson';
+
+import type { EventInput } from '@fullcalendar/core';
+import type { PlainLesson, TeacherSlot } from '@/utils/validateLesson';
 
 interface Lesson {
   id: number;
@@ -35,7 +38,7 @@ interface Props {
   source?: 'draft' | 'active';
   subjects?: { id: number; name: string }[];
   grades?: { id: number; name: string }[];
-  teachers?: { id: number; first_name: string; last_name: string; middle_name?: string }[];
+  teachers?: Teacher[];
   onLessonModalProps?: any;
   onLessonSave?: (l: Lesson) => void;
   onLessonDelete?: (id: number) => void;
@@ -65,12 +68,14 @@ const toPlainLesson = (l: any): PlainLesson => ({
   duration_minutes: l.duration_minutes,
   // можно добавить type если требуется
 });
-const toTeacherSlot = (a: any): TeacherSlot => ({
-  teacher: a.teacher,
-  day_of_week: a.day_of_week,
-  start_time: a.start_time ?? a.start,  // поддержка разных полей
-  end_time: a.end_time ?? a.end,
+
+const toTeacherSlot = (availability: any): TeacherSlot => ({
+  teacher: availability.teacher,
+  day_of_week: availability.day_of_week,
+  start_time: availability.start_time,
+  end_time: availability.end_time,
 });
+
 
 const WeekViewByTeacher: React.FC<Props> = ({
   lessons,
@@ -113,7 +118,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
     <div className="p-4">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold mb-4">Расписание по учителям</h2>
-          <button
+          <Button
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
              const newLesson: Lesson = {
@@ -133,71 +138,66 @@ const WeekViewByTeacher: React.FC<Props> = ({
             }}
           >
             + Новый урок
-          </button>
+          </Button>
       </div>
 
       {teacherIds.map((teacherId) => {
         const teacherLessons = lessons.filter(l => l.teacher === teacherId);
         const teacherName = teacherLessons[0]?.teacher_name || `Учитель ${teacherId}`;
 
-        const lessonEvents = teacherLessons.map((l) => {
-          const baseDate = weekdayMap[l.day_of_week];
-          const safeTime = l.start_time.slice(0, 5);
-          const [hour, minute] = safeTime.split(':').map(Number);
-          const startDate = new Date(`${baseDate}T00:00`);
-          startDate.setHours(hour);
-          startDate.setMinutes(minute);
-          const endDate = new Date(startDate.getTime() + l.duration_minutes * 60000);
+        const lessonEvents: EventInput[] = teacherLessons.map((lesson) => {
+        const baseDate = weekdayMap[lesson.day_of_week];
+        const safeTime = lesson.start_time.slice(0, 5);
+        const [hour, minute] = safeTime.split(':').map(Number);
 
-          const start = startDate.toISOString();
-          const end = endDate.toISOString();
+        const startDate = new Date(`${baseDate}T00:00`);
+        startDate.setHours(hour, minute, 0, 0);
+        const endDate = new Date(startDate.getTime() + lesson.duration_minutes * 60000);
 
-          const emoji = l.type === 'course' ? '📗' : '📘';
+        const emoji = lesson.type === 'course' ? '📗' : '📘';
+
+        return {
+          id: String(lesson.id),
+          title: `${lesson.start_time} · ${lesson.duration_minutes} мин\n${emoji} ${lesson.subject_name}\n🏫 ${lesson.grade_name}`,
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          backgroundColor: statusColorMap[lesson.status || 'ok'],
+          textColor: '#111827',
+          borderColor: 'transparent',
+          display: 'block',
+          extendedProps: {
+            status: lesson.status,
+            durationMin: lesson.duration_minutes,
+          },
+        };
+      });
+
+      const availabilityEvents: EventInput[] = teacherAvailability
+        .filter((slot) => slot.teacher === teacherId)
+        .map((slot, idx) => {
+          const dayIndex = slot.day_of_week; // 0 — Пн
+          const baseDate = weekdayMap[dayIndex];
+          const cleanStart = slot.start_time.slice(0, 5);
+          const cleanEnd = slot.end_time.slice(0, 5);
 
           return {
-            id: String(l.id),
-            title: `${l.start_time} · ${l.duration_minutes} мин\n${emoji} ${l.subject_name}\n🏫 ${l.grade_name}`,
-            start,
-            end,
-            backgroundColor: statusColorMap[l.status || 'ok'],
-            textColor: '#111827',
-            borderColor: 'transparent',
-            display: 'block',
-            extendedProps: {
-              status: l.status,
-              durationMin: l.duration_minutes,
-            }
+            id: `availability-${teacherId}-${idx}`,
+            title: '', // важно для единообразного типа; на фоне не видно
+            start: `${baseDate}T${cleanStart}`,
+            end: `${baseDate}T${cleanEnd}`,
+            display: 'background',
+            backgroundColor: '#dbeafe',
           };
         });
 
-        const availabilityEvents = teacherAvailability
-          .filter(a => a.teacher === teacherId)
-          .map((a, idx) => {
-            const dayIndex = a.day_of_week;  // "0" — Пн
-            const baseDate = weekdayMap[dayIndex];
-
-            const cleanStart = a.start_time.slice(0, 5);
-            const cleanEnd = a.end_time.slice(0, 5);
-            const start = `${baseDate}T${cleanStart}`;
-            const end = `${baseDate}T${cleanEnd}`;
-
-            return {
-              id: `availability-${teacherId}-${idx}`,
-              start,
-              end,
-              display: 'background',
-              backgroundColor: '#dbeafe'
-            };
-          });
-
-        const events = [...lessonEvents, ...availabilityEvents];
+      const events: EventInput[] = [...lessonEvents, ...availabilityEvents];
 
         return (
           <div key={teacherId} className="mb-8">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-md font-bold mb-2">👩‍🏫 {teacherName}</h3>
               {source === 'draft' && (
-                <button
+                <Button
                   className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
                   onClick={() => {
                      const emptyLesson: Lesson = {
@@ -217,7 +217,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
                                    }}
                                   >
                                     + Новый урок
-                </button>
+                </Button>
               )}
             </div>
             <FullCalendarTemplateView
@@ -239,9 +239,9 @@ const WeekViewByTeacher: React.FC<Props> = ({
                 if (!src) return;
                 const updated = rebuildLesson(info, src);
 
-                 // Проверки (с исключением текущего урока)
-                 const base = checkLessons.filter(x => x.id !== src.id);
-                 const { errors, warnings } = validateLesson(toPlainLesson(updated), base, checkAvailability);
+                // Проверки (с исключением текущего урока)
+                const base = checkLessons.filter(x => x.id !== src.id);
+                const { errors, warnings } = validateLesson(toPlainLesson(updated), base, checkAvailability);
 
                   if (errors.length) {
                     message.error(errors.join('\n'));
@@ -253,7 +253,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
                     message.warning(warnings.join('\n'));
                     // Всё равно разрешаем drop!
                   }
-                onLessonSave(updated);
+                onLessonSave && onLessonSave(updated);
               }}
               /** ⬇️ resize */
               onEventResize={(info) => {
@@ -276,7 +276,7 @@ const WeekViewByTeacher: React.FC<Props> = ({
                     // Всё равно разрешаем resize!
                   }
 
-                onLessonSave(updated);
+                onLessonSave && onLessonSave(updated);
               }}
             />
             {selected && (
@@ -290,7 +290,16 @@ const WeekViewByTeacher: React.FC<Props> = ({
                 teacherAvailability={teacherAvailability}
                 {...(onLessonModalProps || {})}
                 onClose={() => setShowModal(false)}
-                onSave={(l) => { if (onLessonSave) onLessonSave(l); setShowModal(false); }}
+                onSave={(plainLesson: PlainLesson) => {
+                  if (!selected) return;
+                  // собираем полный Lesson: подтягиваем subject и остальные поля из selected
+                  const mergedLesson: Lesson = {
+                    ...selected,
+                    ...plainLesson, // перезапишет day_of_week, start_time, duration_minutes, grade, teacher
+                  };
+                  onLessonSave?.(mergedLesson);
+                  setShowModal(false);
+                }}
                 onDelete={(id) => { if (onLessonDelete) onLessonDelete(id); setShowModal(false); }}
               />
             )}

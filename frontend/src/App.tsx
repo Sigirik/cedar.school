@@ -1,4 +1,3 @@
-import React from "react";
 import TemplateWeekEditor from "./components/template/TemplateWeekEditor";
 
 function App() {

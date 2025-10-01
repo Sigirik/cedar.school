@@ -1,4 +1,3 @@
-import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { ArrowLeft, Calendar, Clock, User, GraduationCap, TriangleAlert, Video }
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 // ⬇️ УТОЧНИ путь до prepareLessons под свой проект (например, '@/utils/prepareLessons' или '@/lib/prepareLessons')
-import { prepareLessons } from "@/utils/prepareLessons";
+import { prepareLessons, type LessonRaw, type PreparedLesson as PreparedLessonCore } from "@/utils/prepareLessons";
 
 // --- Types ---
 interface Teacher { fio?: string }
@@ -19,9 +18,6 @@ interface Lesson {
   id: string | number
   title?: string | null
 
-  // старый формат
-  start?: string // ISO
-  end?: string   // ISO
   teacher?: Teacher
   grade?: Grade
   subject?: Subject
@@ -33,12 +29,7 @@ interface Lesson {
   status?: string
 }
 
-// после prepareLessons обычно появляются *_name
-type PreparedLesson = Lesson & {
-  subject_name?: string
-  grade_name?: string
-  teacher_name?: string
-}
+type PreparedLesson = PreparedLessonCore & Lesson
 
 interface Room {
   id: number
@@ -65,40 +56,6 @@ interface Room {
 
 // --- Utilities ---
 const tz = "Europe/Amsterdam";
-
-function formatRange(startISO?: string, endISO?: string) {
-  if (!startISO) return "—";
-  const start = new Date(startISO);
-  const end = endISO ? new Date(endISO) : undefined;
-  const dateFmt = new Intl.DateTimeFormat("ru-RU", {
-    timeZone: tz,
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-  const timeFmt = new Intl.DateTimeFormat("ru-RU", {
-    timeZone: tz,
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dateStr = dateFmt.format(start);
-  const timeStr = end ? `${timeFmt.format(start)}–${timeFmt.format(end)}` : timeFmt.format(start);
-  return `${dateStr}, ${timeStr}`;
-}
-
-// Показать только время начала, если длительность уже выводится отдельно
-function formatDateLabel(startISO?: string, endISO?: string, startOnly?: boolean) {
-  if (!startISO) return "—";
-  const start = new Date(startISO);
-  const end = endISO ? new Date(endISO) : undefined;
-  const dateFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
-  const timeFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
-  const dateStr = dateFmt.format(start);
-  if (startOnly) return `${dateStr}, ${timeFmt.format(start)}`;
-  const timeStr = end ? `${timeFmt.format(start)}–${timeFmt.format(end)}` : timeFmt.format(start);
-  return `${dateStr}, ${timeStr}`;
-}
 
 function fioToSurnameWithInitials(fio?: string) {
   if (!fio) return "—";
@@ -133,7 +90,7 @@ function useLesson(lessonId?: string) {
 
         // поддержка разных форматов ответа (объект или {results:[]})
         const raw = (lessonRes as any)?.data?.results ?? lessonRes.data;
-        const rawArr: Lesson[] = Array.isArray(raw) ? raw : [raw];
+        const rawArr: LessonRaw[] = Array.isArray(raw) ? raw : [raw];
 
         const preparedArr: PreparedLesson[] = prepareLessons(
           rawArr,
@@ -147,7 +104,6 @@ function useLesson(lessonId?: string) {
         setStatus("success");
       } catch (e: unknown) {
         // отмена запроса
-        // @ts-expect-error возможны разные типы cancel
         if ((axios as any).isCancel?.(e) || (e as any)?.name === "CanceledError") return;
         const err = e as AxiosError<any>;
         if (err.response?.status === 404) {
@@ -270,30 +226,17 @@ export default function LessonPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: lesson, status } = useLesson(id);
+  console.log("🚀 ~ LessonPage ~ lesson:", lesson)
   const { url: webinarUrl, room } = useWebinarUrl(id, (lesson as any)?.webinar_url ?? (lesson as any)?.webinar?.url ?? null);
   const [joining, setJoining] = useState(false);
 
   // поддержка обоих форматов времени: (start/end) ИЛИ (date + start_time + duration)
   const startISO = useMemo(() => {
-    if (lesson?.start) return lesson.start;
     if (lesson?.date && lesson?.start_time) {
       return new Date(`${lesson.date}T${lesson.start_time}`).toISOString();
     }
     return undefined;
   }, [lesson]);
-
-  const dateLabel = formatDateLabel(startISO);
-
-  const roomTime = useMemo(() => {
-    if (!room?.scheduled_start) return "—";
-    const start = new Date(room.scheduled_start);
-    const end = room.scheduled_end ? new Date(room.scheduled_end) : undefined;
-    const dateFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
-    const timeFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
-    const dateStr = dateFmt.format(start);
-    const timeStr = end ? `${timeFmt.format(start)}–${timeFmt.format(end)}` : timeFmt.format(start);
-    return `${dateStr}, ${timeStr}`;
-  }, [room]);
 
   const roomDateLabel = useMemo(() => {
     if (!room?.scheduled_start) return "—";
@@ -314,17 +257,6 @@ export default function LessonPage() {
 
   const tStatus = tRoomStatus(room?.status);
 
-  const availWindow = useMemo(() => {
-    if (!room?.available_from || !room?.available_until) return "—";
-    const a = new Date(room.available_from);
-    const b = new Date(room.available_until);
-    const dateFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, day: "2-digit", month: "2-digit", year: "numeric" });
-    const timeFmt = new Intl.DateTimeFormat("ru-RU", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
-    const same = dateFmt.format(a) === dateFmt.format(b);
-    if (same) return `${dateFmt.format(a)}, ${timeFmt.format(a)}–${timeFmt.format(b)}`;
-    return `${dateFmt.format(a)} ${timeFmt.format(a)} — ${dateFmt.format(b)} ${timeFmt.format(b)}`;
-  }, [room]);
-
   const joinAllowedLabel = room?.is_join_allowed_now ? "Да" : "Нет";
   const joinAllowedClass = room?.is_join_allowed_now ? "text-green-600 dark:text-green-400" : "text-muted-foreground";
   const statusBadgeClass = (() => {
@@ -335,7 +267,6 @@ export default function LessonPage() {
   })();
 
   const endISO = useMemo(() => {
-    if (lesson?.end) return lesson.end;
     if (startISO && lesson?.duration_minutes) {
       const start = new Date(startISO).getTime();
       return new Date(start + lesson.duration_minutes * 60_000).toISOString();
@@ -356,10 +287,6 @@ export default function LessonPage() {
   const subject = (lesson as any)?.subject_name || lesson?.subject?.name || "—";
 
   const durationDisplay = useMemo(() => {
-    if (lesson?.start && lesson?.end) {
-      const diff = Math.max(0, Math.round((new Date(lesson.end).getTime() - new Date(lesson.start).getTime()) / 60000));
-      return `${diff} мин`;
-    }
     if (lesson?.duration_minutes) return `${lesson.duration_minutes} мин`;
     return "—";
   }, [lesson]);

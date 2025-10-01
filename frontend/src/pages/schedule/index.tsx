@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@/api/http";
 import FullCalendarTemplateView from "@/components/calendar/FullCalendarTemplateView";
@@ -82,6 +82,7 @@ export default function SchedulePage() {
   const [error,   setError]   = useState<string|null>(null);
 
   const [preparedLessons, setPreparedLessons] = useState<PreparedLesson[]>([]);
+  console.log("🚀 ~ SchedulePage ~ preparedLessons:", preparedLessons)
 
   // 🔀 Вид и «якорная» дата периода
   const [view, setView] = useState<ViewType>("timeGridWeek");
