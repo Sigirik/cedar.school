@@ -1,0 +1,9 @@
+
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>Распределить даты КТП</h1>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" class="default" value="Распределить">
+  </form>
+{% endblock %}
