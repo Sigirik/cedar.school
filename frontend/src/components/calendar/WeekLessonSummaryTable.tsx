@@ -1,28 +1,8 @@
 // frontend/src/components/calendar/WeekLessonSummaryTable.tsx
 import React, { useState } from 'react';
 import LessonEditorModal from './LessonEditorModal';
-
-interface Lesson {
-  id: number;
-  subject: number;
-  subject_name: string;
-  grade: number;
-  grade_name: string;
-  teacher: number;
-  teacher_name: string;
-  day_of_week: number; // 0=Пн ... 4=Пт
-  start_time: string; // HH:mm
-  duration_minutes: number;
-  status?: 'under' | 'ok' | 'over';
-}
-
-interface Teacher {
-  id: number;
-  full_name?: string;
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
-}
+import { Button } from 'antd';
+import type { Lesson, Teacher } from './FullCalendarTemplateView';
 
 interface ReferenceItem {
   id: number;
@@ -88,7 +68,7 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
     if (!rowMap.has(key)) {
       rowMap.set(key, {
         start_time: time,
-        grade_name: l.grade_name,
+        grade_name: l.grade_name || '',
         duration_minutes: l.duration_minutes,
         cells: {},
       });
@@ -117,29 +97,29 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
 
   return (
     <div className="overflow-x-auto border rounded">
-        <div className="flex justify-end p-2">
-          <button
-            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
-            onClick={() => {
-              const newLesson: Lesson = {
-                id: Date.now(),
-                grade: 0 as unknown as number,   // заполните корректным классом в модалке
-                subject: 0 as unknown as number, // idem
-                teacher: 0 as unknown as number, // idem
-                day_of_week: 0,
-                start_time: '08:00',
-                duration_minutes: 45,
-                subject_name: '',
-                grade_name: '',
-                teacher_name: '',
-              };
-              setSelected(newLesson);
-              setShowModal(true);
-            }}
-          >
-            + Новый урок
-          </button>
-        </div>
+      <div className="flex justify-end p-2">
+        <Button
+          className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+          onClick={() => {
+            const newLesson: Lesson = {
+              id: Date.now(),
+              grade: 0 as unknown as number,   // заполните корректным классом в модалке
+              subject: 0 as unknown as number, // idem
+              teacher: 0 as unknown as number, // idem
+              day_of_week: 0,
+              start_time: '08:00',
+              duration_minutes: 45,
+              subject_name: '',
+              grade_name: '',
+              teacher_name: '',
+            };
+            setSelected(newLesson);
+            setShowModal(true);
+          }}
+        >
+          + Новый урок
+        </Button>
+      </div>
       <table className="min-w-full text-sm table-fixed border-collapse">
         <thead>
           <tr className="bg-gray-100">
@@ -182,29 +162,29 @@ const WeekLessonSummaryTable: React.FC<Props> = ({
           ))}
         </tbody>
       </table>
-        <div className="flex justify-end p-2">
-          <button
-            className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
-            onClick={() => {
-             const emptyLesson: Lesson = {
-               id: Date.now(),
-               grade: 0 as unknown as number,
-               subject: 0 as unknown as number,
-               teacher: 0 as unknown as number,
-               day_of_week: 0,
-               start_time: '08:00',
-               duration_minutes: 45,
-               subject_name: '',
-               grade_name: '',
-               teacher_name: '',
-             };
-              setSelected(emptyLesson);
-              setShowModal(true);
-            }}
-          >
-            + Новый урок
-          </button>
-        </div>
+      <div className="flex justify-end p-2">
+        <Button
+          className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
+          onClick={() => {
+            const emptyLesson: Lesson = {
+              id: Date.now(),
+              grade: 0 as unknown as number,
+              subject: 0 as unknown as number,
+              teacher: 0 as unknown as number,
+              day_of_week: 0,
+              start_time: '08:00',
+              duration_minutes: 45,
+              subject_name: '',
+              grade_name: '',
+              teacher_name: '',
+            };
+            setSelected(emptyLesson);
+            setShowModal(true);
+          }}
+        >
+          + Новый урок
+        </Button>
+      </div>
       {selected && (
         <LessonEditorModal
           open={showModal}

@@ -1,26 +1,12 @@
 FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Системные зависимости (psycopg, Pillow и т.п. — при необходимости расширьте)
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev gcc curl \
- && rm -rf /var/lib/apt/lists/*
-
+    build-essential libpq-dev gcc curl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-
-# Кэшируем зависимости
-COPY api/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем проект (предполагая, что корень Django — /srv/cedar/api)
-COPY api/ /app/
-
-# Непривилегированный пользователь
+COPY backend/requirements.txt /app/requirements.txt
+COPY deploy/compose/gunicorn.conf.py /app/gunicorn.conf.py
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY backend/ /app/
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
-
 EXPOSE 8000
-
-# gunicorn запускается из docker-compose командой

@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 // If your project keeps AuthContext elsewhere, adjust the import below.
 // The page works even if the context/provider is temporarily absent.
 import { useAuth } from "@/hooks/AuthContext";
-import { Role, roleToLabel } from "@/components/routing/RoleBasedRoute.tsx";
+import { roleToLabel } from "@/components/routing/RoleBasedRoute.tsx";
+import type { Role } from "@/components/routing/RoleBasedRoute.tsx";
 
 const isScheduleRole = (role?: Role | null) => {
   if (!role) return false;
@@ -79,7 +80,7 @@ const ButtonLink: React.FC<{ to: string; children: React.ReactNode; variant?: "s
 const ForbiddenPage: React.FC = () => {
   const { user } = useAuth();
 
-  const roleFromContext: Role | undefined = user?.role;
+  const roleFromContext: Role | null | undefined = user?.role;
 
   const [role, setRole] = useState<Role | null>(roleFromContext ?? null);
   const [loading, setLoading] = useState<boolean>(!role || true);

@@ -1,31 +1,34 @@
 // utils/prepareLessons.ts
 
-export function formatTeacher(t: { last_name: string; first_name?: string; middle_name?: string }) {
-  if (!t) return '';
-  const first = t.first_name ? `${t.first_name[0]}.` : '';
-  const middle = t.middle_name ? `${t.middle_name[0]}.` : '';
-  return `${t.last_name} ${first}${middle}`.trim();
+export function formatTeacher(
+  teacher?: { last_name?: string; first_name?: string; middle_name?: string } | null
+) {
+  if (!teacher || !teacher.last_name) return '';
+  const firstInitial = teacher.first_name ? `${teacher.first_name[0]}.` : '';
+  const middleInitial = teacher.middle_name ? `${teacher.middle_name[0]}.` : '';
+  return `${teacher.last_name} ${firstInitial}${middleInitial}`.trim();
 }
 
-export function formatGrade(g: { name: string }) {
-  return g ? g.name : '';
+export function formatGrade(grade?: { name?: string } | null) {
+  return grade?.name ?? '';
 }
 
-export function formatSubject(s: { name: string }) {
-  return s ? s.name : '';
+export function formatSubject(subject?: { name?: string } | null) {
+  return subject?.name ?? '';
 }
 
 export type LessonRaw = {
+  id: number;
   subject: number;
   grade: number;
   teacher: number;
-  day_of_week: number;
-  start_time: string;
+  day_of_week: number;     // 0=Пн … 4=Пт (или как у вас заведено)
+  start_time: string;      // 'HH:mm' или 'HH:mm:ss'
   duration_minutes: number;
   type?: string;
 };
 
-export type EnrichedLesson = LessonRaw & {
+export type PreparedLesson = LessonRaw & {
   subject_name: string;
   grade_name: string;
   teacher_name: string;
@@ -43,48 +46,41 @@ export function prepareLessons(
     lessons_per_week: number;
     courses_per_week: number;
   }[] = []
-): EnrichedLesson[] {
-  const getName = (id: number, list: any[], field = 'name') =>
-    list.find((i) => i.id === id)?.[field] || `ID ${id}`;
-
-  // --- теперь экспортируемую функцию formatTeacher используем тут ---
-  const teacherMap = Object.fromEntries(
-    teachers.map((t) => [t.id, formatTeacher(t)])
-  );
-
-  // ---- ПЛОСКИЕ нормы ----
-  const flatNorms = weeklyNorms.map((n) => ({
-    subject: typeof n.subject === 'object' ? n.subject.id : n.subject,
-    grade: typeof n.grade === 'object' ? n.grade.id : n.grade,
-    lessons_per_week: n.lessons_per_week,
-    courses_per_week: n.courses_per_week,
+): PreparedLesson[] {
+  // Нормализуем нормы до простых id
+  const flatNorms = weeklyNorms.map((norm) => ({
+    subject: typeof norm.subject === 'object' ? norm.subject.id : norm.subject,
+    grade: typeof norm.grade === 'object' ? norm.grade.id : norm.grade,
+    lessons_per_week: norm.lessons_per_week,
+    courses_per_week: norm.courses_per_week,
   }));
 
-  const countMap: Record<string, number> = {};
-  lessons.forEach((l) => {
-    const key = `${l.grade}-${l.subject}-${l.type || 'lesson'}`;
-    countMap[key] = (countMap[key] || 0) + 1;
-  });
+  // Подсчёт кол-ва уроков по связке (grade, subject, type)
+  const lessonCountMap: Record<string, number> = {};
+  for (const lesson of lessons) {
+    const key = `${lesson.grade}-${lesson.subject}-${lesson.type || 'lesson'}`;
+    lessonCountMap[key] = (lessonCountMap[key] || 0) + 1;
+  }
 
-  return lessons.map((l) => {
-    const norm = flatNorms.find((n) => n.grade === l.grade && n.subject === l.subject);
-    const count = countMap[`${l.grade}-${l.subject}-${l.type || 'lesson'}`] || 0;
+  return lessons.map((lesson) => {
+    const norm = flatNorms.find(
+      (n) => n.grade === lesson.grade && n.subject === lesson.subject
+    );
+    const count = lessonCountMap[`${lesson.grade}-${lesson.subject}-${lesson.type || 'lesson'}`] || 0;
+
     let status: 'ok' | 'under' | 'over' | undefined;
     if (norm) {
-      const target = l.type === 'course' ? norm.courses_per_week : norm.lessons_per_week;
-      if (count > target) status = 'over';
-      else if (count < target) status = 'under';
-      else status = 'ok';
+      const target = lesson.type === 'course' ? norm.courses_per_week : norm.lessons_per_week;
+      status = count > target ? 'over' : count < target ? 'under' : 'ok';
     }
 
-    // --- используем наши новые универсальные функции для формирования "name" полей ---
-    const subjectObj = subjects.find(s => s.id === l.subject);
-    const gradeObj = grades.find(g => g.id === l.grade);
-    const teacherObj = teachers.find(t => t.id === l.teacher);
+    const subjectObj = subjects.find((subject) => subject.id === lesson.subject);
+    const gradeObj   = grades.find((grade) => grade.id === lesson.grade);
+    const teacherObj = teachers.find((teacher) => teacher.id === lesson.teacher);
 
     return {
-      ...l,
-      start_time: l.start_time.slice(0, 5),
+      ...lesson,
+      start_time: (lesson.start_time || '').slice(0, 5), // 'HH:mm'
       subject_name: formatSubject(subjectObj),
       grade_name: formatGrade(gradeObj),
       teacher_name: formatTeacher(teacherObj),

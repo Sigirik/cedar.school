@@ -4,14 +4,7 @@
 // Показывает subject_name, grade_name
 // Подсвечивает превышения/недостачи цветом
 import React from 'react';
-
-interface Lesson {
-  subject: number;
-  subject_name: string;
-  grade: number;
-  grade_name: string;
-  type?: string;
-}
+import type { Lesson } from './FullCalendarTemplateView';
 
 interface WeeklyNorm {
   subject: number;

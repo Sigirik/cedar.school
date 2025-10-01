@@ -5,6 +5,7 @@ import './index.css';
 import AppRouter from './AppRouter';
 import axios from "axios";
 import { AuthProvider } from "@/hooks/AuthContext";
+import { Toaster } from "sonner"
 
 
 // ✅ Настройка глобального axios для работы с Session + CSRF
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <AppRouter />
+      <Toaster richColors position="top-right" />
     </AuthProvider>
   </StrictMode>,
 );

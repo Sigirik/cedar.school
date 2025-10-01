@@ -1,14 +1,35 @@
 """
 URL configuration for config project.
 """
+from django.http import JsonResponse
+import os, datetime
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from schedule.webinar.views_dev import DevMakeDummyRecordingView
 
+def health(_request):
+    return JsonResponse({"status": "ok"}, status=200)
+
+def version(_request):
+    return JsonResponse({"version": os.environ.get("GIT_SHA", "unknown")})
+
+def time_view(_request):
+    from zoneinfo import ZoneInfo
+    tzname = os.getenv("TIME_ZONE", "UTC")
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    now_local = datetime.datetime.now(ZoneInfo(tzname))
+    return JsonResponse({
+        "utc": now_utc.isoformat(),
+        "local": now_local.isoformat(),
+        "tz": tzname
+    })
 
 urlpatterns = [
+    path("health", health),
+    path("version", version),
+    path("time", time_view),
     # Admin
     path("admin/", admin.site.urls),
 

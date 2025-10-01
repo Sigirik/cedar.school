@@ -15,7 +15,7 @@ export const roleToLabel = (role?: Role | null) => {
     TEACHER: "Учитель",
     STUDENT: "Ученик",
   };
-  const normalized = String(role).toUpperCase();
+  const normalized = String(role).toUpperCase() as Role;
   return map[normalized] ?? role;
 };
 
