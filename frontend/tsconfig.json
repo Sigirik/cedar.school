@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "axios-raw": ["node_modules/axios/index.d.ts"]
+    },
+    "types": ["node"],
+    "skipLibCheck": true,
+    "noImplicitAny": false
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
