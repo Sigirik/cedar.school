@@ -8,6 +8,7 @@ RUN npm ci --include=optional --no-audit --no-fund
 
 # 2. Кладём исходники и билдим
 COPY frontend/ ./
+RUN npm i -D @rollup/rollup-linux-x64-gnu
 RUN npm run build
 
 # Этап сервинга
