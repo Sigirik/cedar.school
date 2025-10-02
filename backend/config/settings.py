@@ -17,7 +17,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Core
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 DEBUG = env_bool("DEBUG", True)
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [
+    "api.beta.cedar.school",
+    "beta.cedar.school",
+    "api.dev.cedar.school",
+    "dev.cedar.school",
+    "127.0.0.1",
+    "localhost",
+]
 
 # Apps
 INSTALLED_APPS = [
@@ -196,9 +203,10 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
 # За reverse proxy (Nginx) с HTTPS
+USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
-SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=(not DEBUG))
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=False)
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
