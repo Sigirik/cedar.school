@@ -48,14 +48,14 @@ services:
       dockerfile: deploy/compose/Dockerfile.front
       args:
         # Протаскиваем Vite-переменные на этап сборки
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_API_BASE: ${VITE_API_BASE}
     container_name: cedar-front-beta
     restart: unless-stopped
     env_file:
       - .env.front-beta
     environment:
       # На всякий случай продублируем в рантайм (если используешь envsubst или подобное)
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      VITE_API_BASE: ${VITE_API_BASE}
     ports:
       - "127.0.0.1:5101:80"        # системный nginx -> 127.0.0.1:5101
     volumes:
