@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  api-beta:
+    env_file:
+      - .env.beta.local
+    ports:
+      - "127.0.0.1:5201:8000"
+
+  pg-beta:
+    env_file:
+      - .env.beta.local
+
+  front-beta:
+    env_file:
+      - .env.front-beta.local
+    ports:
+      - "127.0.0.1:5101:80"
+
+  # не запускаем prod- сервисы локально
+  api-prod:
+    deploy:
+      replicas: 0
+  pg-prod:
+    deploy:
+      replicas: 0
