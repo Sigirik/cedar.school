@@ -28,11 +28,11 @@ services:
       context: ../..
       dockerfile: deploy/compose/Dockerfile.front
       args:
-        VITE_API_BASE: ${VITE_API_BASE}     # ← одно и то же имя
+        VITE_API_BASE: ${VITE_API_BASE:-/api}   # ← mapping + дефолт
     env_file:
       - .env.front-beta
     environment:
-      VITE_API_BASE: ${VITE_API_BASE}       # ← (если делаешь envsubst/скрипты)
+      VITE_API_BASE: ${VITE_API_BASE:-/api}     # ← чтобы было и в рантайме (если нужно)
     ports:
       - "127.0.0.1:5101:80"
     volumes:
@@ -102,26 +102,23 @@ services:
 
   # (опц.) фронт для DEV — под профилем
   front-dev:
+    container_name: cedar-front-dev
     build:
       context: ../..
       dockerfile: deploy/compose/Dockerfile.front
       args:
-        VITE_API_BASE ${VITE_API_BASE}
-    container_name: cedar-front-dev
-    restart: unless-stopped
+        VITE_API_BASE: ${VITE_API_BASE:-/api}   # ← mapping + дефолт
     env_file:
       - .env.front-dev
     environment:
-      VITE_API_BASE: ${VITE_API_BASE}
+      VITE_API_BASE: ${VITE_API_BASE:-/api}
     ports:
-      - "127.0.0.1:5001:80"        # системный nginx -> 127.0.0.1:5001
+      - "127.0.0.1:5001:80"
     volumes:
       - ./nginx-site.dev.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - api-dev
-    networks:
-      - cedar_public
-      - cedar_internal
+    depends_on: [api-dev]
+    networks: [cedar_public, cedar_internal]
+    restart: unless-stopped
     profiles: ["dev-front"]
 
 volumes:
