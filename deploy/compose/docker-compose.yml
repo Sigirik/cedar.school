@@ -15,7 +15,9 @@ services:
     command: >
       bash -lc 'python manage.py migrate --noinput &&
                 gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py'
-    networks: [cedar_internal]
+    networks:
+      cedar_internal: {}
+      cedar_public: {}
     restart: unless-stopped
     logging:
       driver: json-file
@@ -91,7 +93,8 @@ services:
       bash -lc 'python manage.py migrate --noinput &&
                 gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py'
     networks:
-      - cedar_internal
+      cedar_internal: {}
+      cedar_public: {}
     # volumes:
     #   - static_dev:/app/staticfiles
     #   - media_dev:/app/media
