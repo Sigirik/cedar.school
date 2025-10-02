@@ -12,6 +12,8 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:5201:8000"         # ← ОБЯЗАТЕЛЬНО
+    environment:
+      SECURE_SSL_REDIRECT: "false"
     command: >
       bash -lc 'python manage.py migrate --noinput &&
                 gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py'
