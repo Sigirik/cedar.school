@@ -64,10 +64,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env.dev
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     healthcheck:
