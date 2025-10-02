@@ -6,25 +6,14 @@
  */
 
 import React, { useState } from 'react';
-import { message } from 'antd';
-import FullCalendarTemplateView from './FullCalendarTemplateView';
+import { Button, message } from 'antd';
+import FullCalendarTemplateView, { type Lesson, type Teacher } from './FullCalendarTemplateView';
 import LessonEditorModal from './LessonEditorModal';
-import { validateLesson, PlainLesson, TeacherSlot } from '../../utils/validateLesson';
+import { validateLesson } from '@/utils/validateLesson';
 
-interface Lesson {
-  id: number;
-  subject: number;
-  grade: number;
-  teacher: number;
-  day_of_week: number;          // 0 = Пн … 4 = Пт
-  start_time: string;           // 'HH:mm'
-  duration_minutes: number;
-  type?: string;
-  subject_name?: string;
-  grade_name?: string;
-  teacher_name?: string;
-  status?: 'under' | 'ok' | 'over';
-}
+import type { PlainLesson, TeacherSlot } from '@/utils/validateLesson';
+
+
 
 interface Lookup { id: number; name: string; }
 
@@ -33,7 +22,7 @@ interface Props {
   source?: 'draft' | 'active';
   subjects: Lookup[];
   grades: Lookup[];
-  teachers: Lookup[];
+  teachers: Teacher[];
   teacherAvailability: any[];
   onLessonModalProps?: any;
   onLessonSave:   (l: Lesson) => void;
@@ -64,12 +53,13 @@ const toPlainLesson = (l: any): PlainLesson => ({
   duration_minutes: l.duration_minutes,
   // можно добавить type если требуется
 });
-const toTeacherSlot = (a: any): TeacherSlot => ({
-  teacher: a.teacher,
-  day_of_week: a.day_of_week,
-  start_time: a.start_time ?? a.start,  // поддержка разных полей
-  end_time: a.end_time ?? a.end,
+const toTeacherSlot = (availability: any): TeacherSlot => ({
+  teacher: availability.teacher,
+  day_of_week: availability.day_of_week,
+  start_time: availability.start_time,
+  end_time: availability.end_time,
 });
+
 
 const WeekViewByGrade: React.FC<Props> = ({
   lessons,
@@ -112,7 +102,7 @@ const WeekViewByGrade: React.FC<Props> = ({
     <div className="p-4">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold mb-4">Расписание по классам</h2>
-          <button
+          <Button
             className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
             onClick={() => {
              const newLesson: Lesson = {
@@ -132,7 +122,7 @@ const WeekViewByGrade: React.FC<Props> = ({
             }}
           >
             + Новый урок
-          </button>
+          </Button>
       </div>
 
       {gradeIds.map((gradeId) => {
@@ -166,7 +156,7 @@ const WeekViewByGrade: React.FC<Props> = ({
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-md font-bold">🏫 {gradeName}</h3>
               {source === 'draft' && (
-                <button
+                <Button
                   className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded"
                   onClick={() => {
                     const emptyLesson: Lesson = {
@@ -186,7 +176,7 @@ const WeekViewByGrade: React.FC<Props> = ({
                   }}
                 >
                   + Новый урок
-                </button>
+                </Button>
               )}
             </div>
 
@@ -266,7 +256,17 @@ const WeekViewByGrade: React.FC<Props> = ({
           teacherAvailability={teacherAvailability}
           {...(onLessonModalProps || {})}
           onClose={() => setShowModal(false)}
-          onSave={(l) => { onLessonSave(l); setShowModal(false); }}
+          onSave={(plainLesson) => {
+            if (!selected) return; // safety
+
+            //TODO: я не знаю правильная логика или нет надо проверять работает ли
+            const mergedLesson: Lesson = {
+              ...selected,      // берём subject, names и всё что не приходит из редактора
+              ...plainLesson,   // перезапишем day_of_week, start_time, duration_minutes, grade, teacher
+            };
+            onLessonSave(mergedLesson);
+            setShowModal(false);
+          }}
           onDelete={(id) => { onLessonDelete(id); setShowModal(false); }}
         />
       )}

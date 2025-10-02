@@ -9,7 +9,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "@/api/http";
 import WeekViewSwitcher from '../calendar/WeekViewSwitcher';
 import { prepareLessons } from '../../utils/prepareLessons';
-import { message } from "antd";
+import { message, Button } from "antd";
 
 const ActiveTemplateWeekView: React.FC = () => {
   const [preparedLessons, setPreparedLessons] = useState<any[]>([]);
@@ -101,42 +101,41 @@ const ActiveTemplateWeekView: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Активная шаблонная неделя</h1>
+    <div className="min-h-screen bg-white">
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4">Активная шаблонная неделя</h1>
 
-      <div className="flex gap-2 mb-4">
-        <button
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-          onClick={handleCreateDraftFromTemplate}
-        >
-          ✏️ Редактировать шаблон
-        </button>
-
-        {hasDraft && (
-          <button
-            className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
-            onClick={handleRedirectToDraft}
+        <div className="flex gap-2 mb-4">
+          <Button
+            type="primary"
+            onClick={handleCreateDraftFromTemplate}
           >
-            ↩ Перейти в черновик
-          </button>
+            ✏️ Редактировать шаблон
+          </Button>
+
+          {hasDraft && (
+            <Button onClick={handleRedirectToDraft}>
+              ↩ Перейти в черновик
+            </Button>
+          )}
+        </div>
+
+        {loading ? (
+          <p className="text-gray-400">Загрузка…</p>
+        ) : preparedLessons.length === 0 ? (
+          <p className="text-gray-500">Нет уроков в активной неделе.</p>
+        ) : (
+          <WeekViewSwitcher
+            source="active"
+            lessons={preparedLessons}
+            subjects={subjects}
+            grades={grades}
+            teachers={teachers}
+            weeklyNorms={weeklyNorms}
+            teacherAvailability={availability}
+          />
         )}
       </div>
-
-      {loading ? (
-        <p className="text-gray-400">Загрузка…</p>
-      ) : preparedLessons.length === 0 ? (
-        <p className="text-gray-500">Нет уроков в активной неделе.</p>
-      ) : (
-        <WeekViewSwitcher
-          source="active"
-          lessons={preparedLessons}
-          subjects={subjects}
-          grades={grades}
-          teachers={teachers}
-          weeklyNorms={weeklyNorms}
-          teacherAvailability={availability}
-        />
-      )}
     </div>
   );
 };

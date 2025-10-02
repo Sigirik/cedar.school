@@ -2,13 +2,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { api, ACCESS_KEY, REFRESH_KEY } from "@/api/http";
+import type { Role } from "@/components/routing/RoleBasedRoute";
 
 type User = {
   id: number;
   username: string;
   email?: string;
   full_name?: string;
-  role?: string | null;
+  role?: Role | null;
 };
 
 type AuthContextType = {

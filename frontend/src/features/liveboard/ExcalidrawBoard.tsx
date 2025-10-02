@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
-import { Excalidraw, ExcalidrawImperativeAPI } from "@excalidraw/excalidraw";
+import React, { useEffect, useState } from "react";
+// import { Excalidraw, ExcalidrawImperativeAPI } from "@excalidraw/excalidraw";
 import '@/styles/excalidraw.css';
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
 };
 
 const ExcalidrawBoard: React.FC<Props> = ({ canEdit, role }) => {
-  const excalidrawRef = useRef<ExcalidrawImperativeAPI>(null);
+  // const excalidrawRef = useRef<ExcalidrawImperativeAPI>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -16,15 +16,15 @@ const ExcalidrawBoard: React.FC<Props> = ({ canEdit, role }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (excalidrawRef.current) {
-      excalidrawRef.current.updateScene({
-        appState: {
-          viewModeEnabled: !canEdit,
-        },
-      });
-    }
-  }, [canEdit]);
+  // useEffect(() => {
+  //   if (excalidrawRef.current) {
+  //     excalidrawRef.current.updateScene({
+  //       appState: {
+  //         viewModeEnabled: !canEdit,
+  //       },
+  //     });
+  //   }
+  // }, [canEdit]);
 
   if (!mounted) return null;
 
@@ -48,7 +48,7 @@ const ExcalidrawBoard: React.FC<Props> = ({ canEdit, role }) => {
           ✅ Учитель дал вам доступ к доске
         </div>
       )}
-      <Excalidraw ref={excalidrawRef} />
+      {/* <Excalidraw ref={excalidrawRef} /> */}
     </div>
   );
 };
