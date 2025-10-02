@@ -4,7 +4,7 @@ services:
     container_name: cedar-api-beta
     build:
       context: ../..
-      dockerfile: deploy/compose/backend.Dockerfile
+      dockerfile: deploy/compose/Dockerfile.api
     env_file:
       - .env.beta
     depends_on:
@@ -81,7 +81,7 @@ services:
   api-dev:
     build:
       context: ../..
-      dockerfile: deploy/compose/backend.Dockerfile
+      dockerfile: deploy/compose/Dockerfile.api
     container_name: cedar-api-dev
     restart: unless-stopped
     env_file:
