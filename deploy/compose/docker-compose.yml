@@ -16,6 +16,7 @@ services:
       SECURE_SSL_REDIRECT: "false"
     command: >
       bash -lc 'python manage.py migrate --noinput &&
+                python manage.py collectstatic --noinput &&
                 gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py'
     networks:
       cedar_internal: {}
@@ -62,22 +63,6 @@ services:
     networks: [cedar_internal]
     restart: unless-stopped
   # ===== DEV =====
-  pg-dev:
-    image: postgres:15
-    container_name: cedar-pg-dev
-    restart: unless-stopped
-    env_file:
-      - .env.dev
-    volumes:
-      - pgdata_dev:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 3s
-      retries: 30
-    networks:
-      - cedar_internal
-
   api-dev:
     build:
       context: ../..
@@ -93,6 +78,7 @@ services:
       - "127.0.0.1:5401:8000"      # системный nginx -> 127.0.0.1:5401
     command: >
       bash -lc 'python manage.py migrate --noinput &&
+                python manage.py collectstatic --noinput &&
                 gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py'
     networks:
       cedar_internal: {}
@@ -121,6 +107,22 @@ services:
     networks: [cedar_public, cedar_internal]
     restart: unless-stopped
     profiles: ["dev-front"]
+
+  pg-dev:
+    image: postgres:15
+    container_name: cedar-pg-dev
+    restart: unless-stopped
+    env_file:
+      - .env.dev
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    networks:
+      - cedar_internal
 
 volumes:
   pgdata_beta:
