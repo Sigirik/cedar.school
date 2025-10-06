@@ -2,39 +2,45 @@
 
 services:
   db:
-    image: postgres:16-alpine
-    env_file: .env
+    image: postgres:15
+    container_name: cedar-db
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-cedar}
       POSTGRES_USER: ${POSTGRES_USER:-cedar}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cedar}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - pgdata_local:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    networks: [cedar_local]
 
-  backend:
+  api:
+    container_name: cedar-api
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: cedar-backend:dev
-    env_file: .env
-    working_dir: /app
-    volumes:
-      - ./backend:/app         # код + seed + scripts
-      - ./dev_data/recordings:/app/recordings
-    ports:
-      - "8000:8000"
+      context: .
+      dockerfile: deploy/compose/Dockerfile.api
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
-    # команду не указываем — запуск делает CMD в Dockerfile (entrypoint.sh)
+    # локально удобно слушать прям на 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: >
+      bash -lc '
+        echo "Apply migrations..." &&
+        python manage.py migrate --noinput &&
+        # для локалки можно и runserver, но чтобы было одинаково — оставим gunicorn:
+        gunicorn config.wsgi:application -c deploy/compose/gunicorn.conf.py
+      '
+    networks: [cedar_local]
+    restart: unless-stopped
 
   # service "scheduler" рядом с backend
   scheduler:
@@ -66,5 +72,9 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  pgdata_local:
+
+networks:
+  cedar_local:
+    driver: bridge
 

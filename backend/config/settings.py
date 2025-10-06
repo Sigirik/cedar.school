@@ -17,7 +17,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Core
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 DEBUG = env_bool("DEBUG", True)
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [
+    "api.beta.cedar.school",
+    "beta.cedar.school",
+    "api.dev.cedar.school",
+    "dev.cedar.school",
+    "127.0.0.1",
+    "localhost",
+]
 
 # Apps
 INSTALLED_APPS = [
@@ -45,6 +52,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -54,6 +62,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "config.urls"
 
@@ -196,8 +206,10 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
 # За reverse proxy (Nginx) с HTTPS
+USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=False)
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
@@ -240,3 +252,7 @@ JITSI_JWT_AUD = os.getenv("JITSI_JWT_AUD", "jitsi")                  # aud
 JITSI_JWT_SUB = os.getenv("JITSI_JWT_SUB", "jitsi.school.edu")       # sub = ваш домен/tenant
 JITSI_JWT_SECRET = os.getenv("JITSI_JWT_SECRET", "")                 # HS256 секрет (для self-hosted mod_auth_token)
 JITSI_JWT_TTL_MIN = int(os.getenv("JITSI_JWT_TTL_MIN", "120"))       # срок жизни токена
+
+
+if os.getenv("AUTH_DEBUG") == "1":
+    MIDDLEWARE.insert(1, "users.auth_debug.LogAuthPayloadMiddleware")
