@@ -1,9 +1,11 @@
 # schedule/core/admin.py
 from django.contrib import admin
-from schedule.core.models import AcademicYear, Grade, Subject, WeeklyNorm, TeacherAvailability, LessonType
+from schedule.core.models import AcademicYear, Grade, Subject, WeeklyNorm, TeacherAvailability, LessonType, GradeLevel, Parallel
 from .models import TeacherSubject, TeacherGrade, GradeSubject, StudentSubject
 
 admin.site.register(AcademicYear)
+admin.site.register(GradeLevel)
+admin.site.register(Parallel)
 admin.site.register(Grade)
 admin.site.register(Subject)
 admin.site.register(WeeklyNorm)
