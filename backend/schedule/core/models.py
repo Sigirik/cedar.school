@@ -13,12 +13,72 @@ DAY_CHOICES = (
 
 WEEKDAYS = dict(DAY_CHOICES)
 
-class Grade(models.Model):
-    name = models.CharField(max_length=20, unique=True)
+class GradeLevel(models.Model):
+    number = models.PositiveSmallIntegerField(
+        "Ступень (номер класса)",
+        choices=[(i, str(i)) for i in range(1, 12)],
+        unique=True,
+    )
 
     class Meta:
-        verbose_name = "Grade"
+        ordering = ["number"]
+        verbose_name = "Ступень"
+        verbose_name_plural = "Ступени"
+
+    def __str__(self):
+        return str(self.number)
+
+class Parallel(models.Model):
+    code = models.CharField("Параллель", max_length=4, unique=True)  # "А", "Б", ...
+    title = models.CharField("Название", max_length=50, blank=True)
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = "Параллель"
+        verbose_name_plural = "Параллели"
+
+    def __str__(self):
+        return self.code
+
+class Grade(models.Model):
+    # ... ваши существующие поля ...
+    name = models.CharField("Имя класса", max_length=50, unique=True)  # ОСТАЁТСЯ
+
+    # НОВОЕ:
+    level = models.ForeignKey(
+        GradeLevel, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="grades", verbose_name="Ступень"
+    )
+    parallel = models.ForeignKey(
+        Parallel, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="grades", verbose_name="Параллель"
+    )
+
+    class Meta:
+        # Уникальность только если оба поля заданы
+        constraints = [
+            models.UniqueConstraint(
+                fields=["level", "parallel"],
+                name="uniq_grade_level_parallel",
+                condition=models.Q(level__isnull=False, parallel__isnull=False),
+            )
+        ]
+        verbose_name = "Класс"
         verbose_name_plural = "Классы"
+
+    def clean(self):
+        # Если оба FK заданы — name должен совпадать с ними
+        if self.level and self.parallel:
+            expected = f"{self.level.number}{self.parallel.code}"
+            if self.name and self.name != expected:
+                # Не жёстко валидируем, а аккуратно синхронизируем в save()
+                pass
+
+    def save(self, *args, **kwargs):
+        # Мягкая синхронизация name ← level+parallel (если заданы)
+        if self.level and self.parallel:
+            self.name = f"{self.level.number}{self.parallel.code}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
