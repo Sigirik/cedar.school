@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_extensions",
 
     "users",
     "schedule.core",
@@ -252,7 +253,6 @@ JITSI_JWT_AUD = os.getenv("JITSI_JWT_AUD", "jitsi")                  # aud
 JITSI_JWT_SUB = os.getenv("JITSI_JWT_SUB", "jitsi.school.edu")       # sub = ваш домен/tenant
 JITSI_JWT_SECRET = os.getenv("JITSI_JWT_SECRET", "")                 # HS256 секрет (для self-hosted mod_auth_token)
 JITSI_JWT_TTL_MIN = int(os.getenv("JITSI_JWT_TTL_MIN", "120"))       # срок жизни токена
-
 
 if os.getenv("AUTH_DEBUG") == "1":
     MIDDLEWARE.insert(1, "users.auth_debug.LogAuthPayloadMiddleware")
