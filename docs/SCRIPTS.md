@@ -28,6 +28,10 @@ docker compose -f docker-compose.local.yml exec api-local bash -lc 'python scrip
 ### Dev-окружение (Docker Compose на сервере)
 
 На dev‑сервере команды аналогичны, но с вашим dev‑compose-файлом и сервисом API. Наиболее частый вариант:
+docker compose -f docker-compose.yml exec api-dev bash -lc "python scripts/seed_school_basics.py"
+docker compose -f docker-compose.yml exec api-dev bash -lc "python scripts/seed_users_basic.py"
+docker compose -f docker-compose.yml exec api-dev bash -lc "python scripts/seed_template_week.py"
+docker compose -f docker-compose.yml exec api-dev bash -lc 'python scripts/seed_ktp_basic.py'
 
 ```bash
 # из каталога с docker-compose.dev.yml
