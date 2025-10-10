@@ -64,23 +64,37 @@ def seed():
     print(f"Grades {len(grades)} OK")
 
     # 2. Предметы
-    subject_names = ["Математика", "Русский язык", "Английский язык", "Чтение", "Окружающий мир"]
+    base_subjects = ["Математика", "Русский язык", "Английский язык", "Чтение", "Окружающий мир"]
+    extra_subjects = ["География", "История", "Информатика", "Физика"]
+    subject_names = base_subjects + extra_subjects
+
     subjects = {}
     for s in subject_names:
         subj, _ = Subject.objects.get_or_create(name=s)
         subjects[s] = subj
-    print("Subjects OK")
+    print("Subjects OK (with Geography/History/CS/Physics)")
 
     # 3. Grade–Subject через GradeSubject
     created_gs = 0
     for g in grades:
         level_num = g.level.number if g.level_id else int("".join(ch for ch in g.name if ch.isdigit()))
         to_assign = set()
+
+        # базовая логика (как было)
         if 1 <= level_num <= 4:
-            to_assign.update(subject_names)  # все 5
+            to_assign.update(base_subjects)  # все 5 базовых
         if 5 <= level_num <= 6:
             to_assign.add("Математика")
         to_assign.update(["Русский язык", "Английский язык"])
+
+        # новые предметы по уровням
+        if 5 <= level_num <= 11:
+            to_assign.update(["География", "История"])
+        if 6 <= level_num <= 11:
+            to_assign.add("Информатика")
+        if 7 <= level_num <= 11:
+            to_assign.add("Физика")
+
         for sname in to_assign:
             subj = subjects.get(sname)
             if not subj:
@@ -91,11 +105,28 @@ def seed():
     print(f"GradeSubject created {created_gs}")
 
     # 4. Недельные нормы
-    norm_map = {"Математика": 5, "Русский язык": 5, "Английский язык": 3}
+    base_norms_all = {"Математика": 5, "Русский язык": 5, "Английский язык": 3}
     set_norms = 0
+
     for g in grades:
+        level_num = g.level.number if g.level_id else int("".join(ch for ch in g.name if ch.isdigit()))
+
+        # стартуем с базовых норм (для всех классов)
+        norm_map = dict(base_norms_all)
+
+        # добавляем новые предметы с 2 ч/нед на нужных уровнях
+        if 5 <= level_num <= 11:
+            norm_map["География"] = 2
+            norm_map["История"] = 2
+        if 6 <= level_num <= 11:
+            norm_map["Информатика"] = 2
+        if 7 <= level_num <= 11:
+            norm_map["Физика"] = 2
+
         for sname, value in norm_map.items():
-            subj = subjects[sname]
+            subj = subjects.get(sname)
+            if not subj:
+                continue
             obj, created = WeeklyNorm.objects.get_or_create(
                 grade=g, subject=subj,
                 defaults={"lessons_per_week": value}
@@ -104,6 +135,7 @@ def seed():
                 obj.lessons_per_week = value
                 obj.save(update_fields=["lessons_per_week"])
             set_norms += 1
+
     print(f"WeeklyNorm set/updated {set_norms}")
 
     # 5. Типы уроков
