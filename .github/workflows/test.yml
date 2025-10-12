@@ -1,0 +1,71 @@
+# Имя workflow, видно в списке Actions
+name: CI — Build (branch sem)
+
+# Триггеры запуска
+on:
+  # Запуск при пушах именно в ветку sem
+  push:
+    branches: [ "front-ci" ]
+  # Запуск при PR, где целевая ветка — sem (полезно ловить ошибки до merge)
+  pull_request:
+    branches: [ "front-ci" ]
+  # Возможность руками запустить из UI GitHub Actions
+  workflow_dispatch:
+
+# Минимально необходимые permissions для чтения репо
+permissions:
+  contents: read
+
+# Защита от одновременных параллельных прогонов: новый отменяет старый для той же ветки
+concurrency:
+  # Группа конкурентности: уникальна для ветки/рефа
+  group: build-sem-${{ github.ref }}
+  # При запуске нового прогона в группе — отменяем предыдущий
+  cancel-in-progress: true
+
+# Набор job'ов (у нас один — build)
+jobs:
+  build:
+    # Используем Linux-раннер GitHub
+    runs-on: ubuntu-latest
+    # Ограничим время, чтобы повисший билд не жёг минуты
+    timeout-minutes: 15
+
+    # Шаги job'а
+    steps:
+      # 1) Клонируем код репозитория
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Ставим Node.js и включаем кэш npm (ускоряет повторные сборки)
+      - name: Use Node.js 20 with npm cache
+        uses: actions/setup-node@v4
+        with:
+          # Версия Node.js (можно поменять при необходимости)
+          node-version: 20
+          # Включаем встроенный кэш для npm (берёт ключ из lock-файла)
+          cache: npm
+
+      # 3) Устанавливаем зависимости из package-lock.json
+      - name: Install dependencies (npm ci)
+        run: cd frontend
+        run: npm ci
+
+      # 4) Проверяем, что проект собирается (Vite: "dist/" по умолчанию)
+      - name: Build (npm run build)
+        run: npm run build
+
+      # 5) Если сборка упала — соберём базовую отладочную инфу в лог
+      #    (шаг выполнится только при неуспехе предыдущих шагов)
+      - name: Dump basic debug info on failure
+        if: failure()
+        run: |
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch/Ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Node version:"
+          node -v
+          echo "NPM version:"
+          npm -v
+          echo "Disk usage:"
+          df -h
