@@ -13,6 +13,8 @@ from .views import (
     validate_draft
 )
 
+app_name = "draft"
+
 urlpatterns = [
     path('template-drafts/', get_or_create_draft, name='get-or-create-draft'),  # GET — получить, POST — создать на основе активной/по id (по желанию)
     path('template-drafts/create-from/', create_draft_from_template, name='create-draft-from-template'),  # POST с template_id (или без — с активной)
@@ -20,5 +22,5 @@ urlpatterns = [
     path('template-drafts/update/', update_draft, name='update-draft'),  # PATCH
     path('template-drafts/<int:draft_id>/commit/', commit_draft, name='commit-draft'),  # POST
     path('template-drafts/exists/', draft_exists),
-    path('template-drafts/validate/', validate_draft),
+    path('template-drafts/validate/', validate_draft, name='template-draft-validate'),
 ]

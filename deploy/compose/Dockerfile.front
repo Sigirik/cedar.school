@@ -1,0 +1,21 @@
+# Этап сборки
+FROM node:20-bullseye AS build
+WORKDIR /app
+
+# 1. Ставим зависимости строго по lock-файлу + optional deps
+COPY frontend/package*.json ./
+RUN npm ci --include=optional --no-audit --no-fund
+
+# 2. Кладём исходники и билдим
+COPY frontend/ ./
+ARG VITE_API_BASE
+ENV VITE_API_BASE=${VITE_API_BASE}
+RUN npm i -D @rollup/rollup-linux-x64-gnu \
+             @swc/core-linux-x64-gnu \
+             lightningcss \
+             @tailwindcss/oxide-linux-x64-gnu
+RUN npm run build
+
+# Этап сервинга
+FROM nginx:alpine AS stage-1
+COPY --from=build /app/dist /usr/share/nginx/html

@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from schedule.core.models import TeacherSubject, TeacherGrade
 from django.contrib.auth import get_user_model
+from collections import defaultdict
 
 User = get_user_model()
 
@@ -144,13 +145,20 @@ def _collect_overlap_ids(items):
 def check_collisions(lessons: list[dict], include_warnings: bool = True) -> list[dict]:
     problems: list[dict] = []
     by_teacher = defaultdict(list)  # (teacher, day) -> [(s,e,id), ...]
-    by_grade = defaultdict(list)
+    by_grade = defaultdict(list)  # (grade,   day) -> [(s,e,id), ...]
+    by_room = defaultdict(list)  # (room,    day) -> [(s,e,id), ...]
 
     for l in lessons:
         lid = l.get("id")
         teacher = l.get("teacher")
         grade = l.get("grade")
         day = l.get("day_of_week")
+        # room может приходить как room или room_id, иногда объектом
+        room_val = l.get("room", l.get("room_id"))
+        if isinstance(room_val, dict):
+            room = room_val.get("id")
+        else:
+            room = room_val
         try:
             s, e = get_lesson_end(l)
         except Exception:
@@ -162,8 +170,12 @@ def check_collisions(lessons: list[dict], include_warnings: bool = True) -> list
             })
             continue
 
-        if teacher: by_teacher[(teacher, day)].append((s, e, lid))
-        if grade:   by_grade[(grade, day)].append((s, e, lid))
+        if teacher is not None:
+            by_teacher[(teacher, day)].append((s, e, lid))
+        if grade is not None:
+            by_grade[(grade, day)].append((s, e, lid))
+        if room is not None:
+            by_room[(room, day)].append((s, e, lid))
 
         if include_warnings:
             missing = [f for f in ("teacher","grade","subject") if not l.get(f)]
@@ -195,6 +207,18 @@ def check_collisions(lessons: list[dict], include_warnings: bool = True) -> list
                 "lesson_ids": cluster,
                 "severity": "error",
                 "message": f"Пересечение по grade (id={gid}) в день {day}"
+            })
+
+    # 🔔 Пересечения по аудитории/комнате — предупреждение
+    for (rid, day), items in by_room.items():
+        for cluster in _collect_overlap_ids(items):
+            problems.append({
+                "type": "room_overlap",  # оставим явный тип, чтобы фронту проще маппить
+                "resource_id": rid,
+                "weekday": day,
+                "lesson_ids": cluster,
+                "severity": "warning",  # договорённость: по комнате — warning
+                "message": f"Пересечение по room (id={rid}) в день {day}",
             })
 
     return problems

@@ -1,10 +1,13 @@
 {
   "compilerOptions": {
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"],
-      "axios-raw": ["../node_modules/axios/index.d.ts"]
-    }
+      "@/*": ["src/*"],
+      "axios-raw": ["node_modules/axios/index.d.ts"]
+    },
+    "types": ["node"],
+    "skipLibCheck": true,
+    "noImplicitAny": false
   },
   "files": [],
   "references": [

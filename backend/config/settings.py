@@ -17,7 +17,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Core
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 DEBUG = env_bool("DEBUG", True)
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [
+    "api.beta.cedar.school",
+    "beta.cedar.school",
+    "api.dev.cedar.school",
+    "dev.cedar.school",
+    "127.0.0.1",
+    "localhost",
+]
 
 # Apps
 INSTALLED_APPS = [
@@ -27,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_extensions",
 
     "users",
     "schedule.core",
@@ -45,6 +53,7 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -54,6 +63,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 ROOT_URLCONF = "config.urls"
 
@@ -81,25 +92,46 @@ PG_PASSWORD = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD")
 PG_HOST = os.getenv("DB_HOST", os.getenv("POSTGRES_HOST", "db"))
 PG_PORT = os.getenv("DB_PORT", os.getenv("POSTGRES_PORT", "5432"))
 USE_SQLITE = env_bool("USE_SQLITE", False)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not USE_SQLITE and PG_NAME and PG_USER and PG_PASSWORD:
+if DATABASE_URL:
+    try:
+        import dj_database_url  # добавь в requirements.txt: dj-database-url==2.2.0 (или убери try/except и парси сам)
+        DATABASES = {
+            "default": dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,
+                ssl_require=False,  # включи True, если к внешней БД со строгим SSL
+            )
+        }
+    except Exception:
+        # Фоллбек, если dj-database-url не доступен (или не нужен)
+        from urllib.parse import urlparse
+        u = urlparse(DATABASE_URL)
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": u.path.lstrip("/"),
+                "USER": u.username,
+                "PASSWORD": u.password,
+                "HOST": u.hostname,
+                "PORT": u.port or 5432,
+                "CONN_MAX_AGE": 600,
+                "OPTIONS": {"connect_timeout": 5},
+            }
+        }
+else:
+    # Старый вариант через POSTGRES_* для совместимости
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": PG_NAME,
-            "USER": PG_USER,
-            "PASSWORD": PG_PASSWORD,
-            "HOST": PG_HOST,
-            "PORT": PG_PORT,
+            "NAME": os.getenv("POSTGRES_DB", "cedar_beta"),
+            "USER": os.getenv("POSTGRES_USER", "cedar_beta"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "CHANGE_ME"),
+            "HOST": os.getenv("POSTGRES_HOST", "pg-beta"),
+            "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
             "CONN_MAX_AGE": 600,
             "OPTIONS": {"connect_timeout": 5},
-        }
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
@@ -113,12 +145,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # I18N / TZ
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "Europe/Moscow"
+TIME_ZONE = os.getenv("TIME_ZONE", "Europe/Moscow")
 USE_I18N = True
 USE_TZ = True
 
 # Static / Media
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.getenv("STATIC_ROOT", str(BASE_DIR / "staticfiles"))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # === Recordings & media serving (DEV) ===
@@ -149,13 +182,39 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # CORS / CSRF (dev)
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+# CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SECURE = False
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
+# CSRF_COOKIE_SECURE = False
+# CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]
+def _split_csv(name, default=""):
+    v = os.getenv(name, default).strip()
+    return [x.strip() for x in v.split(",") if x.strip()]
+
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # в dev можно "всё", в prod — нет
+CORS_ALLOWED_ORIGINS = _split_csv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173" if DEBUG else ""
+)
+
+CSRF_TRUSTED_ORIGINS = _split_csv(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:5173" if DEBUG else ""
+)
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+
+# За reverse proxy (Nginx) с HTTPS
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=False)
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+X_FRAME_OPTIONS = "DENY"
 
 # JWT
 SIMPLE_JWT = {
@@ -194,3 +253,6 @@ JITSI_JWT_AUD = os.getenv("JITSI_JWT_AUD", "jitsi")                  # aud
 JITSI_JWT_SUB = os.getenv("JITSI_JWT_SUB", "jitsi.school.edu")       # sub = ваш домен/tenant
 JITSI_JWT_SECRET = os.getenv("JITSI_JWT_SECRET", "")                 # HS256 секрет (для self-hosted mod_auth_token)
 JITSI_JWT_TTL_MIN = int(os.getenv("JITSI_JWT_TTL_MIN", "120"))       # срок жизни токена
+
+if os.getenv("AUTH_DEBUG") == "1":
+    MIDDLEWARE.insert(1, "users.auth_debug.LogAuthPayloadMiddleware")

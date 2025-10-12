@@ -1,0 +1,82 @@
+services:
+  pg-local:
+    image: postgres:16-alpine
+    env_file: [.env.local]
+    container_name: cedar-pg-local
+    environment:
+      POSTGRES_DB: cedar_local
+      POSTGRES_USER: cedar_local
+      POSTGRES_PASSWORD: cedar_local
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    networks: [cedar_internal]
+
+  api-local:
+    build:
+      context: ../..           # корень репозитория
+      dockerfile: deploy/compose/Dockerfile.api
+    env_file: [.env.local]
+    container_name: cedar-api-local
+    depends_on:
+      pg-local:
+        condition: service_healthy
+    environment:
+      # минимум для dev
+      DJANGO_SETTINGS_MODULE: config.settings
+      DEBUG: "true"
+      TIME_ZONE: Europe/Moscow
+      ALLOWED_HOSTS: 127.0.0.1,localhost
+      CORS_ALLOWED_ORIGINS: http://localhost:5001
+      CSRF_TRUSTED_ORIGINS: http://localhost:5001
+      DATABASE_URL: postgres://cedar_local:cedar_local@pg-local:5432/cedar_local
+      SECRET_KEY: dev-secret-change-me-please
+      # ВАЖНО: никаких collectstatic/SSL-редиректов локально
+      SECURE_SSL_REDIRECT: "false"
+    ports:
+      - "127.0.0.1:5401:8000"
+    # хотим живую правку кода — смонтируем backend
+    volumes:
+      - ../../backend:/app
+    # убираем старые entrypoint-петли: запускаем только миграции и сервер
+    command:
+      - bash
+      - -lc
+      - |
+        python manage.py migrate --noinput && \
+        python manage.py runserver 0.0.0.0:8000
+    networks: [cedar_internal, cedar_public]
+    restart: unless-stopped
+
+  front-local:
+    build:
+      context: ../..
+      dockerfile: deploy/compose/Dockerfile.front
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api}
+    env_file: [.env.front-local]
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-/api}
+    ports:
+      - "127.0.0.1:5001:80"
+    volumes:
+      - ./nginx-site.local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [api-local]
+    networks: [cedar_public, cedar_internal]
+    restart: unless-stopped
+
+volumes:
+  pgdata_local:
+
+networks:
+  cedar_internal:
+    driver: bridge
+    internal: true
+  cedar_public:
+    driver: bridge
